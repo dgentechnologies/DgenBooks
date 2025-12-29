@@ -26,7 +26,7 @@ import { useUsers } from "@/hooks/use-users";
 import { useUser, useFirestore } from "@/firebase";
 import { createPurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const formSchema = z.object({
   itemName: z.string().min(1, { message: "Item name is required." }),
@@ -70,9 +70,16 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
           date: new Date(),
           paidById: user?.uid || "",
           customSplit: false,
-          splitWith: users.map((u) => u.id),
+          splitWith: [],
         },
   });
+  
+  // Update splitWith default when users load
+  useEffect(() => {
+    if (!expense && users.length > 0 && form.getValues('splitWith').length === 0) {
+      form.setValue('splitWith', users.map((u) => u.id));
+    }
+  }, [users, expense, form]);
 
   const customSplit = form.watch("customSplit");
 
@@ -85,7 +92,7 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
         type: 'purchase',
         ...values,
         date: values.date.toISOString(),
-        splitWith: values.customSplit ? values.splitWith : users.map(u => u.id),
+        splitWith: values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]),
       };
       
       // Save to Firebase

@@ -23,21 +23,3 @@ export function useUserPurchases() {
   
   return result;
 }
-
-/**
- * Hook to fetch purchases from multiple users (for aggregated view)
- * Note: This requires querying each user's purchases separately
- */
-export function useAllPurchases(userIds: string[]) {
-  const firestore = useFirestore();
-  
-  // For now, we'll just return the current user's purchases
-  // A full implementation would need to query all users
-  const purchasesQuery = useMemoFirebase(() => {
-    if (!userIds.length) return null;
-    const purchasesRef = collection(firestore, `users/${userIds[0]}/purchases`);
-    return query(purchasesRef) as Query<DocumentData>;
-  }, [firestore, userIds]);
-  
-  return useCollection<Purchase>(purchasesQuery);
-}

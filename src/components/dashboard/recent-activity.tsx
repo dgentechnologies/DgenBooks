@@ -14,29 +14,41 @@ const getUser = (id: string) => users.find(u => u.id === id);
 
 export function RecentActivity({ transactions }: RecentActivityProps) {
   return (
-    <Card>
+    <Card className="card-hover h-full" role="region" aria-label="Recent Activity">
       <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <span>Recent Activity</span>
+          {transactions.length > 0 && (
+            <span className="ml-auto text-xs font-normal text-muted-foreground" aria-label={`Showing ${transactions.length} transactions`}>
+              Last {transactions.length} transactions
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[120px]">
-          <div className="space-y-4">
-            {transactions.map((transaction) => {
+        <ScrollArea className="h-[140px] pr-4">
+          <div className="space-y-3" role="list">
+            {transactions.map((transaction, index) => {
               const date = new Date(transaction.date);
               return (
-                <div key={transaction.id} className="flex items-center gap-4">
-                  <div className="rounded-full bg-muted p-2">
+                <div 
+                  key={transaction.id} 
+                  className="flex items-center gap-3 sm:gap-4 p-2 rounded-lg hover:bg-accent/5 transition-colors animate-fade-in"
+                  style={{animationDelay: `${index * 0.05}s`}}
+                  role="listitem"
+                >
+                  <div className="rounded-full bg-muted p-2 flex-shrink-0" aria-hidden="true">
                     {transaction.type === 'purchase' ? 
-                      <ShoppingCart className="h-5 w-5 text-accent" /> : 
-                      <ArrowRightLeft className="h-5 w-5 text-primary" />}
+                      <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> : 
+                      <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
                   </div>
-                  <div className="flex-grow">
+                  <div className="flex-grow min-w-0">
                     {transaction.type === 'purchase' ? (
                       <>
-                        <p className="text-sm font-medium leading-none">
+                        <p className="text-sm font-medium leading-none truncate">
                           {transaction.itemName}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
                           Paid by {getUser(transaction.paidById)?.name}
                         </p>
                       </>
@@ -45,24 +57,29 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                         <p className="text-sm font-medium leading-none">
                           Settlement
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {getUser(transaction.fromId)?.name} paid {getUser(transaction.toId)?.name}
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
+                          {getUser(transaction.fromId)?.name} → {getUser(transaction.toId)?.name}
                         </p>
                       </>
                     )}
                   </div>
-                  <div className="text-right">
-                     <div className="font-medium">
+                  <div className="text-right flex-shrink-0">
+                     <div className="font-medium text-sm sm:text-base">
                       ₹{transaction.amount.toLocaleString("en-IN")}
                     </div>
-                     <div className="text-xs text-muted-foreground">
+                     <div className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatDistanceToNow(date, { addSuffix: true })}
                     </div>
                   </div>
                 </div>
               );
             })}
-             {transactions.length === 0 && <p className="text-sm text-muted-foreground text-center">No recent activity.</p>}
+             {transactions.length === 0 && (
+               <div className="flex flex-col items-center justify-center py-8 text-center" role="status">
+                 <p className="text-sm text-muted-foreground">No recent activity.</p>
+                 <p className="text-xs text-muted-foreground mt-1">Add your first expense to get started</p>
+               </div>
+             )}
           </div>
         </ScrollArea>
       </CardContent>

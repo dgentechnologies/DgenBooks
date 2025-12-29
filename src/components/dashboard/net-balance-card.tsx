@@ -13,24 +13,33 @@ export function NetBalanceCard({ balance }: NetBalanceCardProps) {
   }).format(balance);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className="card-hover gradient-overlay overflow-hidden relative" role="region" aria-label="Net Balance Summary">
+      {/* Subtle animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 animate-pulse-soft opacity-50" aria-hidden="true" />
+      
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
         <CardTitle className="text-sm font-medium">My Net Balance</CardTitle>
         {isPositive ? (
-          <TrendingUp className="h-5 w-5 text-primary" />
+          <div className="rounded-full bg-primary/10 p-2" aria-label="Positive balance indicator">
+            <TrendingUp className="h-5 w-5 text-primary" aria-hidden="true" />
+          </div>
         ) : (
-          <TrendingDown className="h-5 w-5 text-red-500" />
+          <div className="rounded-full bg-destructive/10 p-2" aria-label="Negative balance indicator">
+            <TrendingDown className="h-5 w-5 text-destructive" aria-hidden="true" />
+          </div>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         <div
-          className={`text-3xl font-bold ${
-            isPositive ? "text-primary" : "text-red-500"
+          className={`text-2xl sm:text-3xl font-bold transition-colors duration-300 ${
+            isPositive ? "text-primary" : "text-destructive"
           }`}
+          role="status"
+          aria-live="polite"
         >
           {formattedBalance}
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           {isPositive ? "You are owed money" : "You owe money"}
         </p>
       </CardContent>

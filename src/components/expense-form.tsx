@@ -96,13 +96,17 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
             <FormItem>
               <FormLabel>Item Name</FormLabel>
               <FormControl>
-                <Input placeholder="Team Lunch" {...field} />
+                <Input 
+                  placeholder="Team Lunch" 
+                  {...field} 
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="amount"
@@ -110,7 +114,12 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
               <FormItem>
                 <FormLabel>Price</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="100" {...field} />
+                  <Input 
+                    type="number" 
+                    placeholder="100" 
+                    {...field}
+                    className="transition-all focus:ring-2 focus:ring-primary/20"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -124,7 +133,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
                 <FormLabel>Category</FormLabel>
                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
@@ -138,7 +147,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="date"
@@ -151,7 +160,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
                       <Button
                         variant={"outline"}
                         className={cn(
-                          "w-full pl-3 text-left font-normal",
+                          "w-full pl-3 text-left font-normal transition-all focus:ring-2 focus:ring-primary/20",
                           !field.value && "text-muted-foreground"
                         )}
                       >
@@ -185,7 +194,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
                 <FormLabel>Paid By</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
                       <SelectValue placeholder="Who paid?" />
                     </SelectTrigger>
                   </FormControl>
@@ -203,10 +212,10 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
           control={form.control}
           name="customSplit"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm hover:bg-accent/5 transition-colors">
               <div className="space-y-0.5">
                 <FormLabel>Custom Split</FormLabel>
-                <FormDescription>
+                <FormDescription className="text-xs sm:text-sm">
                   Split cost only among selected users.
                 </FormDescription>
               </div>
@@ -225,14 +234,14 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
             control={form.control}
             name="splitWith"
             render={() => (
-              <FormItem>
+              <FormItem className="animate-fade-in">
                 <div className="mb-4">
                   <FormLabel className="text-base">Split With</FormLabel>
-                  <FormDescription>
+                  <FormDescription className="text-xs sm:text-sm">
                     Select the users to split this expense with.
                   </FormDescription>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {users.map((item) => (
                     <FormField
                       key={item.id}
@@ -242,7 +251,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
                         return (
                           <FormItem
                             key={item.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
+                            className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border p-3 hover:bg-accent/5 transition-colors"
                           >
                             <FormControl>
                               <Checkbox
@@ -258,7 +267,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
                                 }}
                               />
                             </FormControl>
-                            <FormLabel className="font-normal">
+                            <FormLabel className="font-normal cursor-pointer">
                               {item.name}
                             </FormLabel>
                           </FormItem>
@@ -273,9 +282,19 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
           />
         )}
         
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {expense ? "Save Changes" : "Add Expense"}
+        <Button 
+          type="submit" 
+          className="w-full transition-all hover:scale-[1.02] active:scale-[0.98]" 
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>Processing...</span>
+            </>
+          ) : (
+            <span>{expense ? "Save Changes" : "Add Expense"}</span>
+          )}
         </Button>
       </form>
     </Form>

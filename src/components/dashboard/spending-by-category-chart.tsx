@@ -56,41 +56,55 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
   const totalSpent = useMemo(() => chartData.reduce((acc, curr) => acc + curr.value, 0), [chartData]);
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full card-hover">
       <CardHeader className="items-center pb-0">
-        <CardTitle>Spending by Category</CardTitle>
-        <CardDescription>Donut chart of your team's expenses.</CardDescription>
+        <CardTitle className="text-center">Spending by Category</CardTitle>
+        <CardDescription className="text-center">Donut chart of your team's expenses.</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[300px]"
-        >
-          <PieChart>
-             <Tooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel nameKey="name" />}
-            />
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={60}
-              strokeWidth={5}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ChartContainer>
+      <CardContent className="flex-1 pb-0 flex items-center justify-center">
+        {chartData.length > 0 ? (
+          <ChartContainer
+            config={chartConfig}
+            className="mx-auto aspect-square max-h-[250px] sm:max-h-[300px] w-full"
+          >
+            <PieChart>
+               <Tooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel nameKey="name" />}
+              />
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={50}
+                outerRadius={80}
+                strokeWidth={5}
+                animationDuration={800}
+                animationBegin={0}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={chartConfig[entry.name]?.color}
+                    className="hover:opacity-80 transition-opacity cursor-pointer"
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ChartContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[250px] text-center p-4">
+            <p className="text-sm text-muted-foreground">No spending data yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Add expenses to see the breakdown</p>
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
+      <CardFooter className="flex-col gap-2 text-sm pt-4">
         <div className="flex items-center gap-2 font-medium leading-none">
           Total spent this period: ₹{totalSpent.toLocaleString('en-IN')}
-          <TrendingUp className="h-4 w-4" />
+          <TrendingUp className="h-4 w-4 text-primary" />
         </div>
-        <div className="leading-none text-muted-foreground">
+        <div className="leading-none text-muted-foreground text-center">
           Showing total spending for all purchases
         </div>
       </CardFooter>

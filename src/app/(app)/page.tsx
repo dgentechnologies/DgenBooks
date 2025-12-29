@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,14 +13,44 @@ import type { Transaction } from "@/lib/types";
 import { initialTransactions, currentUser } from "@/lib/data";
 import { calculateBalances } from "@/lib/logic";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const { netBalances } = useMemo(() => calculateBalances(transactions), [transactions]);
   const myNetBalance = netBalances.get(currentUser.id) || 0;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Ctrl/Cmd + N: New expense
+      if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+        event.preventDefault();
+        setIsFormOpen(true);
+      }
+      // Ctrl/Cmd + L: Go to log
+      if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
+        event.preventDefault();
+        router.push('/log');
+      }
+      // Ctrl/Cmd + S: Go to settle
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        router.push('/settle');
+      }
+      // Escape: Close dialog
+      if (event.key === 'Escape' && isFormOpen) {
+        setIsFormOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isFormOpen, router]);
 
   const handleAddTransaction = (newTransaction: Transaction) => {
     setTransactions(prev => [newTransaction, ...prev]);
@@ -38,7 +68,12 @@ export default function DashboardPage() {
       {/* Welcome Section - Premium touch */}
       <div className="hidden sm:block mb-6">
         <h2 className="text-2xl font-bold font-headline text-foreground/90">Welcome back!</h2>
-        <p className="text-muted-foreground">Here's an overview of your expenses and balances.</p>
+        <p className="text-muted-foreground">
+          Here's an overview of your expenses and balances.
+          <span className="ml-2 text-xs">
+            (Tip: Press <kbd className="px-1 py-0.5 text-xs font-semibold bg-muted border rounded">Ctrl+N</kbd> to add expense)
+          </span>
+        </p>
       </div>
 
       {/* Top Stats Grid - Fully Responsive */}

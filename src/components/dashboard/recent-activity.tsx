@@ -14,12 +14,12 @@ const getUser = (id: string) => users.find(u => u.id === id);
 
 export function RecentActivity({ transactions }: RecentActivityProps) {
   return (
-    <Card className="card-hover h-full">
+    <Card className="card-hover h-full" role="region" aria-label="Recent Activity">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span>Recent Activity</span>
           {transactions.length > 0 && (
-            <span className="ml-auto text-xs font-normal text-muted-foreground">
+            <span className="ml-auto text-xs font-normal text-muted-foreground" aria-label={`Showing ${transactions.length} transactions`}>
               Last {transactions.length} transactions
             </span>
           )}
@@ -27,7 +27,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[140px] pr-4">
-          <div className="space-y-3">
+          <div className="space-y-3" role="list">
             {transactions.map((transaction, index) => {
               const date = new Date(transaction.date);
               return (
@@ -35,8 +35,9 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                   key={transaction.id} 
                   className="flex items-center gap-3 sm:gap-4 p-2 rounded-lg hover:bg-accent/5 transition-colors animate-fade-in"
                   style={{animationDelay: `${index * 0.05}s`}}
+                  role="listitem"
                 >
-                  <div className="rounded-full bg-muted p-2 flex-shrink-0">
+                  <div className="rounded-full bg-muted p-2 flex-shrink-0" aria-hidden="true">
                     {transaction.type === 'purchase' ? 
                       <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> : 
                       <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
@@ -74,7 +75,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
               );
             })}
              {transactions.length === 0 && (
-               <div className="flex flex-col items-center justify-center py-8 text-center">
+               <div className="flex flex-col items-center justify-center py-8 text-center" role="status">
                  <p className="text-sm text-muted-foreground">No recent activity.</p>
                  <p className="text-xs text-muted-foreground mt-1">Add your first expense to get started</p>
                </div>

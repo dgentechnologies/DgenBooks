@@ -1,23 +1,53 @@
 'use client'
 
 import React, { useState, useMemo } from 'react';
-import { initialTransactions } from '@/lib/data';
 import type { Transaction } from '@/lib/types';
 import { DataTable } from './data-table';
 import { columns } from './columns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useUserPurchases } from '@/hooks/use-purchases';
+import { useUserSettlements } from '@/hooks/use-settlements';
+import { useUser } from '@/firebase';
+import { Loader2 } from 'lucide-react';
 
 export default function ExpenseLogPage() {
-  const [transactions] = useState<Transaction[]>(initialTransactions);
   const [filter, setFilter] = useState('all');
+  const { user } = useUser();
+  
+  // Fetch purchases and settlements from Firebase
+  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
+  const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  
+  // Combine purchases and settlements into transactions
+  const transactions = useMemo(() => {
+    const allTransactions: Transaction[] = [];
+    if (purchases) {
+      allTransactions.push(...purchases);
+    }
+    if (settlements) {
+      allTransactions.push(...settlements);
+    }
+    // Sort by date, most recent first
+    return allTransactions.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [purchases, settlements]);
 
   const filteredTransactions = useMemo(() => {
     if (filter === 'all') {
       return transactions;
     }
-    // This is a simplified filter. A real implementation would check involvement.
-    return transactions.filter(t => t.type === 'purchase' && t.paidById === 'user1');
-  }, [transactions, filter]);
+    // Filter for expenses paid by current user
+    return transactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+  }, [transactions, filter, user]);
+
+  if (purchasesLoading || settlementsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">

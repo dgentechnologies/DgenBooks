@@ -1,33 +1,74 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { initialTransactions } from "@/lib/data";
 import type { Debt, Settlement, Transaction } from "@/lib/types";
 import { calculateBalances } from "@/lib/logic";
 import { DebtCard } from "@/components/settle/debt-card";
 import { useToast } from "@/hooks/use-toast";
+import { useUserPurchases } from "@/hooks/use-purchases";
+import { useUserSettlements } from "@/hooks/use-settlements";
+import { useUser, useFirestore } from "@/firebase";
+import { createSettlement } from "@/lib/db";
+import { Loader2 } from "lucide-react";
 
 export default function SettleUpPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  
+  // Fetch purchases and settlements from Firebase
+  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
+  const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  
+  // Combine purchases and settlements into transactions
+  const transactions = useMemo(() => {
+    const allTransactions: Transaction[] = [];
+    if (purchases) {
+      allTransactions.push(...purchases);
+    }
+    if (settlements) {
+      allTransactions.push(...settlements);
+    }
+    return allTransactions;
+  }, [purchases, settlements]);
 
   const { debts } = useMemo(() => calculateBalances(transactions), [transactions]);
 
-  const handleSettle = (debt: Debt) => {
-    const newSettlement: Settlement = {
-      id: `settle_${Date.now()}`,
-      type: "settlement",
-      fromId: debt.from.id,
-      toId: debt.to.id,
-      amount: debt.amount,
-      date: new Date().toISOString(),
-    };
-    setTransactions(prev => [...prev, newSettlement]);
-    toast({
-      title: "Debt Settled!",
-      description: `${debt.from.name} paid ${debt.to.name} ₹${debt.amount.toFixed(2)}.`,
-    });
+  const handleSettle = async (debt: Debt) => {
+    if (!user) return;
+    
+    try {
+      const settlementData: Omit<Settlement, 'id'> = {
+        type: "settlement",
+        fromId: debt.from.id,
+        toId: debt.to.id,
+        amount: debt.amount,
+        date: new Date().toISOString(),
+      };
+      
+      await createSettlement(firestore, user.uid, settlementData);
+      
+      toast({
+        title: "Debt Settled!",
+        description: `${debt.from.name} paid ${debt.to.name} ₹${debt.amount.toFixed(2)}.`,
+      });
+    } catch (error) {
+      console.error('Error settling debt:', error);
+      toast({
+        title: "Error",
+        description: "Failed to settle debt. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (purchasesLoading || settlementsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">

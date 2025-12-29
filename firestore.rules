@@ -109,12 +109,16 @@ service cloud.firestore {
      * @description Rules for the User profile document.
      * @path /users/{userId}
      * @allow (create) An authenticated user creating their own user profile.
-     * @deny (list) Any user attempting to list all user profiles.
-     * @principle Enforces self-creation and ownership of a user's own profile document and prevents user enumeration.
+     * @allow (list) Any authenticated user can list users for split functionality.
+     * @principle Enforces self-creation and ownership of a user's own profile document.
+     * 
+     * SECURITY NOTE: User listing is enabled to support expense splitting functionality.
+     * This means all authenticated users can see the names and avatars of other users.
+     * Consider implementing additional privacy controls if this is a concern for your use case.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if isCreatingValidUser(userId);
       allow update: if isExistingOwner(userId) && isUpdatingValidUser();
       allow delete: if isExistingOwner(userId);

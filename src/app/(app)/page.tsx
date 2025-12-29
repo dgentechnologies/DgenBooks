@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { NetBalanceCard } from "@/components/dashboard/net-balance-card";
@@ -10,19 +10,40 @@ import { SpendingByCategoryChart } from "@/components/dashboard/spending-by-cate
 import { TotalSpendingChart } from "@/components/dashboard/total-spending-chart";
 import { ExpenseForm } from "@/components/expense-form";
 import type { Transaction } from "@/lib/types";
-import { initialTransactions, currentUser } from "@/lib/data";
 import { calculateBalances } from "@/lib/logic";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { useUserPurchases } from "@/hooks/use-purchases";
+import { useUserSettlements } from "@/hooks/use-settlements";
+import { useUser } from "@/firebase";
 
 export default function DashboardPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useUser();
+  
+  // Fetch purchases and settlements from Firebase
+  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
+  const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  
+  // Combine purchases and settlements into transactions
+  const transactions = useMemo(() => {
+    const allTransactions: Transaction[] = [];
+    if (purchases) {
+      allTransactions.push(...purchases);
+    }
+    if (settlements) {
+      allTransactions.push(...settlements);
+    }
+    // Sort by date, most recent first
+    return allTransactions.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [purchases, settlements]);
 
   const { netBalances } = useMemo(() => calculateBalances(transactions), [transactions]);
-  const myNetBalance = netBalances.get(currentUser.id) || 0;
+  const myNetBalance = netBalances.get(user?.uid || '') || 0;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -48,8 +69,7 @@ export default function DashboardPage() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [router]);
 
-  const handleAddTransaction = (newTransaction: Transaction) => {
-    setTransactions(prev => [newTransaction, ...prev]);
+  const handleExpenseSuccess = () => {
     setIsFormOpen(false);
     toast({
       title: "Expense Added",
@@ -57,7 +77,15 @@ export default function DashboardPage() {
     });
   };
   
-  const purchases = useMemo(() => transactions.filter(t => t.type === 'purchase'), [transactions]);
+  const purchasesList = useMemo(() => transactions.filter(t => t.type === 'purchase'), [transactions]);
+
+  if (purchasesLoading || settlementsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative space-y-4 sm:space-y-6 animate-fade-in">
@@ -85,10 +113,10 @@ export default function DashboardPage() {
       {/* Charts Grid - Enhanced Responsiveness */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-5">
         <div className="lg:col-span-3 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
-          <TotalSpendingChart purchases={purchases} />
+          <TotalSpendingChart purchases={purchasesList} />
         </div>
         <div className="lg:col-span-2 animate-slide-in-right" style={{animationDelay: '0.4s'}}>
-          <SpendingByCategoryChart purchases={purchases} />
+          <SpendingByCategoryChart purchases={purchasesList} />
         </div>
       </div>
 
@@ -107,7 +135,7 @@ export default function DashboardPage() {
           <DialogHeader>
             <DialogTitle className="font-headline text-xl">Add New Expense</DialogTitle>
           </DialogHeader>
-          <ExpenseForm onSave={handleAddTransaction} />
+          <ExpenseForm onSuccess={handleExpenseSuccess} />
         </DialogContent>
       </Dialog>
        <div className="hidden md:block">
@@ -125,7 +153,7 @@ export default function DashboardPage() {
             <DialogHeader>
               <DialogTitle className="font-headline text-xl">Add New Expense</DialogTitle>
             </DialogHeader>
-            <ExpenseForm onSave={handleAddTransaction} />
+            <ExpenseForm onSuccess={handleExpenseSuccess} />
           </DialogContent>
          </Dialog>
       </div>

@@ -3,21 +3,23 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Logo } from "@/components/icons/logo";
 import { GoogleIcon } from "@/components/icons/google-icon";
+import { createUserProfile } from "@/lib/db";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -63,7 +65,14 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
 
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Create user profile in Firestore if it doesn't exist
+      await createUserProfile(firestore, result.user.uid, {
+        name: result.user.displayName || 'User',
+        avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
+      });
+      
       toast({
         title: "Success",
         description: "Successfully logged in with Google!",
@@ -96,7 +105,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md card-hover gradient-overlay">
         <CardHeader className="space-y-4">
           <div className="flex justify-center animate-fade-in">
-            <Logo className="h-12 w-12" />
+            <Image src="/images/logo.png" alt="DgenBooks Logo" width={48} height={48} className="h-12 w-12" />
           </div>
           <CardTitle className="text-center text-2xl sm:text-3xl font-headline">Welcome Back</CardTitle>
           <CardDescription className="text-center text-sm sm:text-base">

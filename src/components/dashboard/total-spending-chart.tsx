@@ -42,34 +42,51 @@ export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
     return spendingByUser;
   }, [purchases]);
 
+  const hasData = chartData.some(d => d.amount > 0);
+
   return (
-    <Card className="h-full">
+    <Card className="h-full card-hover">
       <CardHeader>
         <CardTitle>Total Spending Per Person</CardTitle>
         <CardDescription>Who paid for what.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={chartData}>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="user"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value) => value.slice(0, 3)}
-            />
-            <Tooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="dot" />}
-            />
-            <Bar
-              dataKey="amount"
-              fill="var(--color-amount)"
-              radius={8}
-            />
-          </BarChart>
-        </ChartContainer>
+        {hasData ? (
+          <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
+            <BarChart accessibilityLayer data={chartData}>
+              <CartesianGrid 
+                vertical={false} 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))"
+                opacity={0.3}
+              />
+              <XAxis
+                dataKey="user"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) => value.slice(0, 3)}
+                className="text-xs"
+              />
+              <Tooltip
+                cursor={{ fill: 'hsl(var(--accent) / 0.1)' }}
+                content={<ChartTooltipContent indicator="dot" />}
+              />
+              <Bar
+                dataKey="amount"
+                fill="var(--color-amount)"
+                radius={[8, 8, 0, 0]}
+                animationDuration={800}
+                animationBegin={0}
+              />
+            </BarChart>
+          </ChartContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[200px] sm:h-[250px] text-center p-4">
+            <p className="text-sm text-muted-foreground">No spending data yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Add expenses to see who paid</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

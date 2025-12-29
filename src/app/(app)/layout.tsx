@@ -11,11 +11,11 @@ export default function AppLayout({
   return (
     <AuthGuard>
       <SidebarProvider>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen w-full">
           <SidebarNav />
-          <main className="flex flex-1 flex-col">
+          <main className="flex flex-1 flex-col w-full min-w-0">
             <Header />
-            <div className="flex-1 p-4 md:p-8">{children}</div>
+            <div className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden">{children}</div>
           </main>
         </div>
       </SidebarProvider>

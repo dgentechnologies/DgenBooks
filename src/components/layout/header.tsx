@@ -53,31 +53,38 @@ export function Header() {
   const userName = user?.displayName || user?.email || "User";
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg md:px-6">
+    <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 backdrop-blur-lg md:px-6 transition-all">
       <div className="md:hidden">
         <SidebarTrigger />
       </div>
-      <h1 className="text-xl font-semibold md:text-2xl font-headline">{title}</h1>
-      <div className="ml-auto flex items-center gap-4">
+      <h1 className="text-lg sm:text-xl md:text-2xl font-semibold font-headline truncate flex-1 md:flex-none">{title}</h1>
+      <div className="ml-auto flex items-center gap-2 sm:gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10">
+            <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all">
+              <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
                 <AvatarImage src={user?.photoURL || undefined} alt={userName} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                   {userInitial}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>{userName}</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56 animate-fade-in">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{userName}</p>
+                <p className="text-xs leading-none text-muted-foreground truncate">
+                  {user?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />

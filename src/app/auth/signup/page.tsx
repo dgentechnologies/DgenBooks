@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,18 +12,30 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/icons/logo";
 import { GoogleIcon } from "@/components/icons/google-icon";
+import { createUserProfile } from "@/lib/db";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!name.trim()) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -46,7 +58,14 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Create user profile in Firestore
+      await createUserProfile(firestore, userCredential.user.uid, {
+        name: name.trim(),
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`,
+      });
+      
       toast({
         title: "Success",
         description: "Account created successfully!",
@@ -79,7 +98,14 @@ export default function SignupPage() {
     const provider = new GoogleAuthProvider();
 
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Create user profile in Firestore if it doesn't exist
+      await createUserProfile(firestore, result.user.uid, {
+        name: result.user.displayName || 'User',
+        avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
+      });
+      
       toast({
         title: "Success",
         description: "Successfully signed in with Google!",
@@ -121,6 +147,19 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleEmailSignup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                disabled={isLoading}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

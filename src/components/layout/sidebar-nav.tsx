@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Sidebar,
   SidebarHeader,
@@ -17,7 +18,6 @@ import {
   Settings,
   CircleUser,
 } from "lucide-react";
-import { Logo } from "../icons/logo";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -33,7 +33,7 @@ export function SidebarNav() {
       <SidebarContent>
         <SidebarHeader>
           <div className="p-2">
-            <Logo />
+            <Image src="/images/logo.png" alt="DgenBooks Logo" width={120} height={30} />
           </div>
         </SidebarHeader>
         <SidebarMenu>

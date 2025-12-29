@@ -22,7 +22,9 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { users, currentUser } from "@/lib/data";
+import { useUsers } from "@/hooks/use-users";
+import { useUser, useFirestore } from "@/firebase";
+import { createPurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
 import { useState } from "react";
 
@@ -39,14 +41,18 @@ const formSchema = z.object({
 });
 
 interface ExpenseFormProps {
-  onSave: (transaction: Purchase) => void;
+  onSave?: (transaction: Purchase) => void;
+  onSuccess?: () => void;
   expense?: Purchase;
 }
 
 const categories = ["Food", "Software", "Business", "Travel", "Other"];
 
-export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
+export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { users, isLoading: usersLoading } = useUsers();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,7 +68,7 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
           category: "",
           amount: 0,
           date: new Date(),
-          paidById: currentUser.id,
+          paidById: user?.uid || "",
           customSplit: false,
           splitWith: users.map((u) => u.id),
         },
@@ -70,20 +76,46 @@ export function ExpenseForm({ onSave, expense }: ExpenseFormProps) {
 
   const customSplit = form.watch("customSplit");
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) return;
+    
     setIsLoading(true);
-    // Simulate async operation
-    setTimeout(() => {
-      const newTransaction: Purchase = {
-        id: expense?.id || `txn_${Date.now()}`,
+    try {
+      const purchaseData: Omit<Purchase, 'id'> = {
         type: 'purchase',
         ...values,
         date: values.date.toISOString(),
         splitWith: values.customSplit ? values.splitWith : users.map(u => u.id),
       };
-      onSave(newTransaction);
+      
+      // Save to Firebase
+      const purchaseId = await createPurchase(firestore, user.uid, purchaseData);
+      
+      // Call the legacy onSave callback if provided
+      if (onSave) {
+        onSave({ id: purchaseId, ...purchaseData });
+      }
+      
+      // Call onSuccess if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Reset form
+      form.reset();
+    } catch (error) {
+      console.error('Error saving purchase:', error);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
+  }
+
+  if (usersLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (

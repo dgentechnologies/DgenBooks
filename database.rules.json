@@ -1,8 +1,10 @@
 {
   "rules": {
     "users": {
+      ".read": "auth != null",
+      ".indexOn": ["name"],
       "$userId": {
-        ".read": "$userId === auth.uid",
+        ".read": "auth != null",
         ".write": "$userId === auth.uid",
         ".validate": "newData.hasChildren(['id', 'name', 'avatar'])",
         "id": {

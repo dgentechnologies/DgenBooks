@@ -72,7 +72,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
                 Mark as Paid
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="w-[95vw] max-w-md">
+          <AlertDialogContent className="max-w-[min(95vw,28rem)]">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-headline">Confirm Settlement</AlertDialogTitle>
               <AlertDialogDescription className="text-sm sm:text-base">

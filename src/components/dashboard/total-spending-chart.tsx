@@ -42,7 +42,7 @@ export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
     return spendingByUser;
   }, [purchases]);
 
-  const hasData = chartData.some(d => d.amount > 0);
+  const hasData = purchases.length > 0;
 
   return (
     <Card className="h-full card-hover">

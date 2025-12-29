@@ -42,15 +42,11 @@ export default function DashboardPage() {
         event.preventDefault();
         router.push('/settle');
       }
-      // Escape: Close dialog
-      if (event.key === 'Escape' && isFormOpen) {
-        setIsFormOpen(false);
-      }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isFormOpen, router]);
+  }, [router]);
 
   const handleAddTransaction = (newTransaction: Transaction) => {
     setTransactions(prev => [newTransaction, ...prev]);

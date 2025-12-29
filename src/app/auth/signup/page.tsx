@@ -108,14 +108,14 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-background animate-fade-in">
+      <Card className="w-full max-w-md card-hover gradient-overlay">
         <CardHeader className="space-y-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center animate-fade-in">
             <Logo className="h-12 w-12" />
           </div>
-          <CardTitle className="text-center">Create Account</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-center text-2xl sm:text-3xl font-headline">Create Account</CardTitle>
+          <CardDescription className="text-center text-sm sm:text-base">
             Sign up to get started with DgenBooks
           </CardDescription>
         </CardHeader>
@@ -131,6 +131,7 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
@@ -143,7 +144,9 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
               />
+              <p className="text-xs text-muted-foreground">At least 6 characters</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -155,9 +158,14 @@ export default function SignupPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full transition-all hover:scale-[1.02] active:scale-[0.98]" 
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
@@ -174,7 +182,7 @@ export default function SignupPage() {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full transition-all hover:scale-[1.02] active:scale-[0.98]"
             onClick={handleGoogleSignup}
             disabled={isLoading}
           >
@@ -185,7 +193,7 @@ export default function SignupPage() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/auth/login" className="text-primary hover:underline">
+            <Link href="/auth/login" className="text-primary hover:underline font-medium transition-colors">
               Sign in
             </Link>
           </p>

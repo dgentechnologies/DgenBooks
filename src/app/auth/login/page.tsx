@@ -92,14 +92,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-background animate-fade-in">
+      <Card className="w-full max-w-md card-hover gradient-overlay">
         <CardHeader className="space-y-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center animate-fade-in">
             <Logo className="h-12 w-12" />
           </div>
-          <CardTitle className="text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-center text-2xl sm:text-3xl font-headline">Welcome Back</CardTitle>
+          <CardDescription className="text-center text-sm sm:text-base">
             Sign in to your account to continue
           </CardDescription>
         </CardHeader>
@@ -115,6 +115,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
@@ -127,9 +128,14 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full transition-all hover:scale-[1.02] active:scale-[0.98]" 
+              disabled={isLoading}
+            >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
@@ -146,7 +152,7 @@ export default function LoginPage() {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full transition-all hover:scale-[1.02] active:scale-[0.98]"
             onClick={handleGoogleLogin}
             disabled={isLoading}
           >
@@ -157,7 +163,7 @@ export default function LoginPage() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link href="/auth/signup" className="text-primary hover:underline">
+            <Link href="/auth/signup" className="text-primary hover:underline font-medium transition-colors">
               Sign up
             </Link>
           </p>

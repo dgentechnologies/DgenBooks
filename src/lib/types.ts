@@ -32,3 +32,13 @@ export type Debt = {
   to: User;
   amount: number;
 };
+
+export type PurchaseRequest = {
+  id: string;
+  itemName: string;
+  requestedBy: string; // User ID
+  priority: 'Urgent' | 'Standard';
+  status: 'Pending' | 'Purchased';
+  estimatedCost?: number;
+  createdAt: string; // ISO string
+};

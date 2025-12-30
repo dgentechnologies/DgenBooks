@@ -17,11 +17,13 @@ import {
   Handshake,
   Settings,
   CircleUser,
+  ShoppingCart,
 } from "lucide-react";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/log", label: "Expense Log", icon: ReceiptText },
+  { href: "/requests", label: "Purchase List", icon: ShoppingCart },
   { href: "/settle", label: "Settle Up", icon: Handshake },
 ];
 

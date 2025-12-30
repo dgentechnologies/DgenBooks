@@ -45,11 +45,14 @@ interface ExpenseFormProps {
   onSave?: (transaction: Purchase) => void;
   onSuccess?: () => void;
   expense?: Purchase;
+  prefillData?: {
+    itemName?: string;
+  };
 }
 
 const categories = ["Food", "Software", "Business", "Travel", "Other"];
 
-export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
+export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { users, isLoading: usersLoading } = useUsers();
   const { user } = useUser();
@@ -65,7 +68,7 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
           customSplit: expense.splitWith.length !== users.length,
         }
       : {
-          itemName: "",
+          itemName: prefillData?.itemName || "",
           category: "",
           amount: 0,
           date: new Date(),

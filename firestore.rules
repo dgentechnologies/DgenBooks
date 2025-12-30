@@ -139,5 +139,46 @@ service cloud.firestore {
       allow update: if isUpdatingValidSettlement();
       allow delete: if isSignedIn() && resource.data.fromId == request.auth.uid;
     }
+
+    /**
+     * Validates that the purchase request is being created by the authenticated user.
+     */
+    function isCreatingValidPurchaseRequest() {
+      return isSignedIn() && request.resource.data.requestedBy == request.auth.uid;
+    }
+
+    /**
+     * Validates that the purchase request is being updated by the user who created it,
+     * and that the requestedBy field is not being changed.
+     */
+    function isUpdatingValidPurchaseRequest() {
+      return isSignedIn()
+        && resource.data.requestedBy == request.auth.uid
+        && request.resource.data.requestedBy == resource.data.requestedBy;
+    }
+
+    /**
+     * @description Rules for shared purchase request records.
+     * @path /purchaseRequests/{requestId}
+     * @allow (read) All authenticated users can read purchase requests for team collaboration.
+     * @allow (create) Authenticated users can create purchase requests.
+     * @allow (update) Only the request creator can update their request, but any authenticated
+     *                 user can mark a request as 'Purchased' (status update only).
+     * @allow (delete) Only the request creator can delete their request.
+     */
+    match /purchaseRequests/{requestId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isCreatingValidPurchaseRequest();
+      allow update: if isSignedIn() && (
+        // Original creator can update their request
+        isUpdatingValidPurchaseRequest()
+        // OR any authenticated user can mark as purchased (status field only)
+        || (resource.data.requestedBy == resource.data.requestedBy 
+            && request.resource.data.keys().hasOnly(['status', 'updatedAt'])
+            && request.resource.data.status == 'Purchased')
+      );
+      allow delete: if isSignedIn() && resource.data.requestedBy == request.auth.uid;
+    }
   }
 }

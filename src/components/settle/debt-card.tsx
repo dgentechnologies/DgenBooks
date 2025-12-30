@@ -53,7 +53,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
   };
 
   return (
-    <Card className="card-hover gradient-overlay overflow-hidden w-full max-w-full sm:max-w-md mx-auto">
+    <Card className="card-hover gradient-overlay overflow-hidden w-full sm:max-w-md mx-auto">
       <CardContent className="p-4 sm:p-6">
         {/* Header: "Who Owes Who" section with responsive layout */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-4 w-full">

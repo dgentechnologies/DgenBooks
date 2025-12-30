@@ -49,7 +49,7 @@ export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps
       };
     });
     return spendingByUser;
-  }, [purchases]);
+  }, [purchases, users]);
 
   const hasData = purchases.length > 0;
 

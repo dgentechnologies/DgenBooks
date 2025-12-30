@@ -27,6 +27,7 @@ import { useUser, useFirestore } from "@/firebase";
 import { createPurchase, updatePurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
 import { useState, useEffect } from "react";
+import { getCategoryIcon } from "@/lib/category-icons";
 
 const formSchema = z.object({
   itemName: z.string().min(1, { message: "Item name is required." }),
@@ -190,7 +191,17 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                      {categories.map(cat => {
+                        const Icon = getCategoryIcon(cat);
+                        return (
+                          <SelectItem key={cat} value={cat}>
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <span>{cat}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 <FormMessage />

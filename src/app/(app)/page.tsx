@@ -84,10 +84,10 @@ export default function DashboardPage() {
       {/* Top Stats Grid - Fully Responsive */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <div className="animate-slide-in-right" style={{animationDelay: '0.1s'}}>
-          <AddExpenseCard />
+          <NetBalanceCard balance={myNetBalance} />
         </div>
         <div className="animate-slide-in-right" style={{animationDelay: '0.2s'}}>
-          <NetBalanceCard balance={myNetBalance} />
+          <AddExpenseCard />
         </div>
         <div className="md:col-span-2 lg:col-span-3 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
           <RecentActivity transactions={transactions.slice(0, 5)} />

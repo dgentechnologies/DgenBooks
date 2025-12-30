@@ -32,12 +32,12 @@ export function AddExpenseCard() {
         
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
           <CardTitle className="text-sm font-medium">Add Expense</CardTitle>
-          <div className="rounded-full bg-primary/10 p-2">
+          <div className="rounded-full bg-gradient-to-br from-primary/20 to-accent/20 p-3 ring-1 ring-primary/20">
             <Plus className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="text-2xl sm:text-3xl font-bold text-primary">
+          <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             New
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">

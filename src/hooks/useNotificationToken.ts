@@ -13,7 +13,7 @@ const SERVICE_WORKER_PATH = '/firebase-messaging-sw.js';
 // VAPID key - IMPORTANT: Replace this with your actual VAPID key from Firebase Console
 // Generate at: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
 // TODO: Move to environment variable for better security
-const VAPID_KEY = 'YOUR_VAPID_KEY_HERE_REPLACE_WITH_ACTUAL_KEY_FROM_FIREBASE_CONSOLE';
+const VAPID_KEY = 'BFZE4SK3p9z7CaJ3dwvdlPmvSTWZfGAKNmqviBXjNv2bJls8bf0ThRXCpjopXzU4S1q2Z9bFKRSZsBT2ePIgEuQ';
 
 export interface NotificationState {
   permission: NotificationPermission;

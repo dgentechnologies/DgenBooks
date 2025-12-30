@@ -32,6 +32,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
             {transactions.map((transaction, index) => {
               const date = new Date(transaction.date);
               const CategoryIcon = transaction.type === 'purchase' ? getCategoryIcon(transaction.category) : ArrowRightLeft;
+              const iconColor = transaction.type === 'purchase' ? 'text-accent' : 'text-primary';
               return (
                 <div 
                   key={transaction.id} 
@@ -44,7 +45,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                       ? 'bg-gradient-to-br from-accent/20 to-accent/10 ring-1 ring-accent/20' 
                       : 'bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20'
                   }`} aria-hidden="true">
-                    <CategoryIcon className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
+                    <CategoryIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
                   </div>
                   <div className="flex-grow min-w-0">
                     {transaction.type === 'purchase' ? (

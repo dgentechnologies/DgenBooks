@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { createUserProfile } from "@/lib/db";
+import { getFullNameFromNickname } from "@/lib/user-mapping";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -60,9 +61,12 @@ export default function SignupPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
+      // Map nickname to full name if applicable
+      const fullName = getFullNameFromNickname(name.trim());
+      
       // Create user profile in Firestore
       await createUserProfile(firestore, userCredential.user.uid, {
-        name: name.trim(),
+        name: fullName,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`,
       });
       
@@ -100,9 +104,13 @@ export default function SignupPage() {
     try {
       const result = await signInWithPopup(auth, provider);
       
+      // Map displayName to full name if applicable
+      const displayName = result.user.displayName || 'User';
+      const fullName = getFullNameFromNickname(displayName);
+      
       // Create user profile in Firestore if it doesn't exist
       await createUserProfile(firestore, result.user.uid, {
-        name: result.user.displayName || 'User',
+        name: fullName,
         avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
       });
       

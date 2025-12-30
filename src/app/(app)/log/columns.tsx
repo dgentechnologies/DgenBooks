@@ -2,7 +2,6 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 import type { Transaction, User, Purchase } from "@/lib/types"
-import { users } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUpDown, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,8 +23,6 @@ import { deletePurchase } from "@/lib/db/purchases"
 import { useFirestore, useUser } from "@/firebase"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-
-const getUser = (id: string): User | undefined => users.find(u => u.id === id);
 
 // Action cell component for edit and delete
 function ActionCell({ transaction }: { transaction: Transaction }) {
@@ -116,7 +113,10 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
 }
 
 
-export const columns: ColumnDef<Transaction>[] = [
+export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
+  const getUser = (id: string): User | undefined => users.find(u => u.id === id);
+  
+  return [
   {
     accessorKey: "date",
     header: ({ column }) => {
@@ -224,4 +224,5 @@ export const columns: ColumnDef<Transaction>[] = [
       return <ActionCell transaction={transaction} />;
     },
   },
-]
+  ];
+};

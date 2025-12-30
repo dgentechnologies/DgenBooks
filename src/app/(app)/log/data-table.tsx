@@ -24,13 +24,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { users } from "@/lib/data"
 import { X } from "lucide-react"
-import type { Transaction } from "@/lib/types"
+import type { Transaction, User } from "@/lib/types"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  users: User[]
 }
 
 // Get unique categories from data
@@ -47,6 +47,7 @@ const getCategories = (data: Transaction[]): string[] => {
 export function DataTable<TData, TValue>({
   columns,
   data,
+  users,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([
       { id: 'date', desc: true }
@@ -85,8 +86,8 @@ export function DataTable<TData, TValue>({
   }, [data, categoryFilter, paidByFilter]);
 
   const table = useReactTable({
-    data: filteredData,
-    columns,
+    data: filteredData as TData[],
+    columns: columns as ColumnDef<TData, TValue>[],
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,

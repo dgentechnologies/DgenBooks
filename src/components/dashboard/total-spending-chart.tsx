@@ -47,7 +47,7 @@ export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
   return (
     <Card className="h-full card-hover">
       <CardHeader>
-        <CardTitle>Total Spending Per Person</CardTitle>
+        <CardTitle>Total Spending (Team)</CardTitle>
         <CardDescription>Who paid for what.</CardDescription>
       </CardHeader>
       <CardContent>

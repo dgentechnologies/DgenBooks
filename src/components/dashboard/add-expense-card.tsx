@@ -5,18 +5,14 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExpenseForm } from "@/components/expense-form";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 
 export function AddExpenseCard() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const { toast } = useToast();
 
   const handleExpenseSuccess = () => {
     setIsFormOpen(false);
-    toast({
-      title: "Expense Added",
-      description: `Successfully added the expense.`,
-    });
+    toast.success("Expense Added", "Successfully added the expense.");
   };
 
   return (

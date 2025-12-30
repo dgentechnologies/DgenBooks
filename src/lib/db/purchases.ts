@@ -37,11 +37,20 @@ export async function updatePurchase(
   purchaseId: string,
   updates: Partial<Omit<Purchase, 'id' | 'type' | 'paidById'>>
 ): Promise<void> {
-  const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
-  await updateDoc(purchaseRef, {
-    ...updates,
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
+    await updateDoc(purchaseRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error: any) {
+    // Check for Firebase permission denied error
+    if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
+      throw new Error('PERMISSION_DENIED: You can only modify your own expenses.');
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**
@@ -53,6 +62,15 @@ export async function deletePurchase(
   userId: string,
   purchaseId: string
 ): Promise<void> {
-  const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
-  await deleteDoc(purchaseRef);
+  try {
+    const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
+    await deleteDoc(purchaseRef);
+  } catch (error: any) {
+    // Check for Firebase permission denied error
+    if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
+      throw new Error('PERMISSION_DENIED: You can only modify your own expenses.');
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }

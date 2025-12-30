@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { createUserProfile } from "@/lib/db";
 import { getFullNameFromNickname } from "@/lib/user-mapping";
@@ -24,35 +24,22 @@ export default function SignupPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
-      toast({
-        title: "Error",
-        description: "Name is required",
-        variant: "destructive",
-      });
+      toast.error("Error", "Name is required");
       return;
     }
 
     if (password !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
+      toast.error("Error", "Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      });
+      toast.error("Error", "Password must be at least 6 characters");
       return;
     }
 
@@ -70,10 +57,7 @@ export default function SignupPage() {
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`,
       });
       
-      toast({
-        title: "Success",
-        description: "Account created successfully!",
-      });
+      toast.success("Success", "Account created successfully!");
       router.push("/");
     } catch (error) {
       let errorMessage = "Failed to create account";
@@ -87,11 +71,7 @@ export default function SignupPage() {
           errorMessage = "Password is too weak";
         }
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -114,10 +94,7 @@ export default function SignupPage() {
         avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
       });
       
-      toast({
-        title: "Success",
-        description: "Successfully signed in with Google!",
-      });
+      toast.success("Success", "Successfully signed in with Google!");
       router.push("/");
     } catch (error) {
       let errorMessage = "Failed to sign in with Google";
@@ -131,11 +108,7 @@ export default function SignupPage() {
           errorMessage = "Sign-in popup was blocked by your browser";
         }
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }

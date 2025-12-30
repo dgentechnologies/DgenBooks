@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertCircle, Clock, DollarSign, User, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { ExpenseForm } from "@/components/expense-form";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 import { useFirestore } from "@/firebase";
 import { updatePurchaseRequest } from "@/lib/db";
 import type { PurchaseRequest, User as UserType } from "@/lib/types";
@@ -20,7 +20,6 @@ interface PurchaseRequestCardProps {
 
 export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps) {
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
-  const { toast } = useToast();
   const firestore = useFirestore();
   const requestedUser = users.find(u => u.id === request.requestedBy);
 
@@ -37,17 +36,10 @@ export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps
       });
       
       setIsExpenseDialogOpen(false);
-      toast({
-        title: "Item Purchased",
-        description: `${request.itemName} has been marked as purchased and added to expenses.`,
-      });
+      toast.success("Item Purchased", `${request.itemName} has been marked as purchased and added to expenses.`);
     } catch (error) {
       console.error('Error updating purchase request:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update purchase request status.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to update purchase request status.");
     }
   };
 

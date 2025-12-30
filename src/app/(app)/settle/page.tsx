@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import type { Debt, Settlement, Transaction } from "@/lib/types";
 import { calculateBalances } from "@/lib/logic";
 import { DebtCard } from "@/components/settle/debt-card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 import { useUserPurchases } from "@/hooks/use-purchases";
 import { useUserSettlements } from "@/hooks/use-settlements";
 import { useUsers } from "@/hooks/use-users";
@@ -13,7 +13,6 @@ import { createSettlement } from "@/lib/db";
 import { Loader2 } from "lucide-react";
 
 export default function SettleUpPage() {
-  const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
   
@@ -51,17 +50,10 @@ export default function SettleUpPage() {
       
       await createSettlement(firestore, user.uid, settlementData);
       
-      toast({
-        title: "Debt Settled!",
-        description: `${debt.from.name} paid ${debt.to.name} ₹${settlementAmount.toFixed(2)}.`,
-      });
+      toast.success("Debt Settled!", `${debt.from.name} paid ${debt.to.name} ₹${settlementAmount.toFixed(2)}.`);
     } catch (error) {
       console.error('Error settling debt:', error);
-      toast({
-        title: "Error",
-        description: "Failed to settle debt. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to settle debt. Please try again.");
     }
   };
 

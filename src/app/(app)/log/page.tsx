@@ -3,10 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import type { Transaction } from '@/lib/types';
 import { DataTable } from './data-table';
-import { columns } from './columns';
+import { createColumns } from './columns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserPurchases } from '@/hooks/use-purchases';
 import { useUserSettlements } from '@/hooks/use-settlements';
+import { useUsers } from '@/hooks/use-users';
 import { useUser } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 
@@ -17,6 +18,7 @@ export default function ExpenseLogPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  const { users, isLoading: usersLoading } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -56,8 +58,11 @@ export default function ExpenseLogPage() {
     
     return transactions;
   }, [transactions, filter, user]);
+  
+  // Create columns with Firebase users
+  const columns = useMemo(() => createColumns(users), [users]);
 
-  if (purchasesLoading || settlementsLoading) {
+  if (purchasesLoading || settlementsLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -81,7 +86,7 @@ export default function ExpenseLogPage() {
         </Tabs>
       </div>
       <div className="rounded-lg border bg-card card-hover">
-        <DataTable columns={columns} data={filteredTransactions} />
+        <DataTable columns={columns} data={filteredTransactions} users={users} />
       </div>
     </div>
   );

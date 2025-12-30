@@ -41,4 +41,5 @@ export type PurchaseRequest = {
   status: 'Pending' | 'Purchased';
   estimatedCost?: number;
   createdAt: string; // ISO string
+  updatedAt?: string; // ISO string, optional
 };

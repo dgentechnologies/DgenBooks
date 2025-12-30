@@ -31,7 +31,8 @@ export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps
   const handleExpenseSuccess = async () => {
     // Update the purchase request status to 'Purchased'
     try {
-      await updatePurchaseRequest(firestore, request.requestedBy, request.id, {
+      // Note: Any authenticated user can mark as purchased per Firestore rules
+      await updatePurchaseRequest(firestore, '', request.id, {
         status: 'Purchased',
       });
       
@@ -87,7 +88,17 @@ export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps
           
           <div className="flex items-center text-muted-foreground">
             <Clock className="h-4 w-4 mr-2" />
-            <span>{format(new Date(request.createdAt), 'MMM d, yyyy')}</span>
+            <span>
+              {request.createdAt 
+                ? format(
+                    typeof request.createdAt === 'string' 
+                      ? new Date(request.createdAt) 
+                      : (request.createdAt as any).toDate?.() || new Date(),
+                    'MMM d, yyyy'
+                  )
+                : 'Recently'
+              }
+            </span>
           </div>
         </CardContent>
         

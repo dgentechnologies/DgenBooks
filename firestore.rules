@@ -174,8 +174,7 @@ service cloud.firestore {
         // Original creator can update their request
         isUpdatingValidPurchaseRequest()
         // OR any authenticated user can mark as purchased (status field only)
-        || (resource.data.requestedBy == resource.data.requestedBy 
-            && request.resource.data.keys().hasOnly(['status', 'updatedAt'])
+        || (request.resource.data.keys().hasOnly(['status', 'updatedAt'])
             && request.resource.data.status == 'Purchased')
       );
       allow delete: if isSignedIn() && resource.data.requestedBy == request.auth.uid;

@@ -3,6 +3,8 @@ export type User = {
   name: string;
   avatar: string;
   nickname?: string; // Optional nickname field for backwards compatibility
+  fcmTokens?: string[]; // Array of FCM tokens for multi-device support
+  lastTokenUpdate?: string; // ISO string of last token update
 };
 
 export type Purchase = {

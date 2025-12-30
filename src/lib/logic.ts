@@ -2,12 +2,16 @@ import type { Transaction, User, Debt } from './types';
 
 export function calculateBalances(transactions: Transaction[], users: User[]): { netBalances: Map<string, number>, debts: Debt[] } {
   const balances = new Map<string, Map<string, number>>();
+  const userIds = new Set(users.map(u => u.id));
 
   for (const user1 of users) {
     balances.set(user1.id, new Map());
     for (const user2 of users) {
       if (user1.id !== user2.id) {
-        balances.get(user1.id)!.set(user2.id, 0);
+        const user1Balance = balances.get(user1.id);
+        if (user1Balance) {
+          user1Balance.set(user2.id, 0);
+        }
       }
     }
   }
@@ -17,18 +21,30 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
       const { paidById, amount, splitWith } = transaction;
       if (splitWith.length === 0) continue;
       
+      // Skip transaction if paidById is not in users
+      if (!userIds.has(paidById)) continue;
+      
       const share = amount / splitWith.length;
 
       for (const participantId of splitWith) {
-        if (participantId !== paidById) {
-          const currentOwed = balances.get(participantId)!.get(paidById)!;
-          balances.get(participantId)!.set(paidById, currentOwed + share);
+        if (participantId !== paidById && userIds.has(participantId)) {
+          const participantBalance = balances.get(participantId);
+          const paidByBalance = participantBalance?.get(paidById);
+          if (participantBalance && paidByBalance !== undefined) {
+            participantBalance.set(paidById, paidByBalance + share);
+          }
         }
       }
     } else if (transaction.type === 'settlement') {
       const { fromId, toId, amount } = transaction;
-      const currentOwed = balances.get(fromId)!.get(toId)!;
-      balances.get(fromId)!.set(toId, currentOwed - amount);
+      // Skip transaction if either user is not in users
+      if (!userIds.has(fromId) || !userIds.has(toId)) continue;
+      
+      const fromBalance = balances.get(fromId);
+      const currentOwed = fromBalance?.get(toId);
+      if (fromBalance && currentOwed !== undefined) {
+        fromBalance.set(toId, currentOwed - amount);
+      }
     }
   }
 

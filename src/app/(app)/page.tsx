@@ -84,22 +84,22 @@ export default function DashboardPage() {
       </div>
 
       {/* Top Stats Grid - Fully Responsive */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <div className="animate-slide-in-right" style={{animationDelay: '0.1s'}}>
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3">
+        <div className="md:col-span-2 animate-slide-in-right" style={{animationDelay: '0.1s'}}>
           <NetBalanceCard balance={myNetBalance} />
         </div>
         <div className="animate-slide-in-right" style={{animationDelay: '0.2s'}}>
           <AddExpenseCard />
         </div>
-        <div className="md:col-span-2 lg:col-span-3 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
-          <RecentActivity transactions={transactions.slice(0, 5)} />
+        <div className="md:col-span-3 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
+          <RecentActivity transactions={transactions.slice(0, 5)} users={users} />
         </div>
       </div>
 
       {/* Charts Grid - Enhanced Responsiveness */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-5">
         <div className="lg:col-span-3 animate-slide-in-right" style={{animationDelay: '0.4s'}}>
-          <TotalSpendingChart purchases={purchasesList} />
+          <TotalSpendingChart purchases={purchasesList} users={users} />
         </div>
         <div className="lg:col-span-2 animate-slide-in-right" style={{animationDelay: '0.5s'}}>
           <SpendingByCategoryChart purchases={purchasesList} />

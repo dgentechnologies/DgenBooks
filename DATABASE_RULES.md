@@ -4,7 +4,7 @@ This document explains the database rules for both Firestore and Realtime Databa
 
 ## Overview
 
-The application uses **Firestore** as the primary database. The Realtime Database rules are provided for reference if needed in the future.
+The application uses **Firestore** as the primary database with a **shared collections** model for team expense tracking. The Realtime Database rules are provided for reference if needed in the future.
 
 ## Firestore Rules
 
@@ -18,21 +18,21 @@ The Firestore rules are defined in `firestore.rules` and enforce the following s
 - **Update**: Users can only update their own profile
 - **Delete**: Users can only delete their own profile
 
-### Purchases (`/users/{userId}/purchases/{purchaseId}`)
+### Purchases (`/purchases/{purchaseId}`)
 
-- **Read/List**: Users can only access their own purchases
-- **Create**: Users can create purchases in their own collection
-- **Update**: Users can update their own purchases
-- **Delete**: Users can delete their own purchases
-- **Validation**: The `paidById` field must match the user's ID
+- **Read/List**: All authenticated users can read all purchases (for team expense tracking)
+- **Create**: Users can create purchases where they are the payer (paidById must match auth.uid)
+- **Update**: Only the user who paid can update their purchase (paidById cannot be changed)
+- **Delete**: Only the user who paid can delete their purchase
+- **Validation**: The `paidById` field must match the authenticated user's ID on create
 
-### Settlements (`/users/{userId}/settlements/{settlementId}`)
+### Settlements (`/settlements/{settlementId}`)
 
-- **Read/List**: Users can only access their own settlements
-- **Create**: Users can create settlements in their own collection
-- **Update**: Users can update their own settlements
-- **Delete**: Users can delete their own settlements
-- **Validation**: The `fromUserId` field must match the user's ID
+- **Read/List**: All authenticated users can read all settlements (for team balance calculations)
+- **Create**: Users can create settlements where they are the payer (fromId must match auth.uid)
+- **Update**: Only the user who paid can update their settlement (fromId cannot be changed)
+- **Delete**: Only the user who paid can delete their settlement
+- **Validation**: The `fromId` field must match the authenticated user's ID on create
 
 ## Realtime Database Rules
 
@@ -59,25 +59,25 @@ The Realtime Database rules are defined in `database.rules.json` and follow a si
   - id: string
   - name: string
   - avatar: string
-  
-  /purchases/{purchaseId}
-    - type: "purchase"
-    - itemName: string
-    - category: string
-    - date: ISO string
-    - amount: number
-    - paidById: userId (must match parent)
-    - splitWith: string[] (array of user IDs)
-    - createdAt: timestamp
-    - updatedAt: timestamp (optional)
-  
-  /settlements/{settlementId}
-    - type: "settlement"
-    - fromId: userId (must match parent)
-    - toId: string (target user ID)
-    - amount: number
-    - date: ISO string
-    - createdAt: timestamp
+
+/purchases/{purchaseId}
+  - type: "purchase"
+  - itemName: string
+  - category: string
+  - date: ISO string
+  - amount: number
+  - paidById: userId (must match authenticated user on create)
+  - splitWith: string[] (array of user IDs)
+  - createdAt: timestamp
+  - updatedAt: timestamp (optional)
+
+/settlements/{settlementId}
+  - type: "settlement"
+  - fromId: userId (must match authenticated user on create)
+  - toId: string (target user ID)
+  - amount: number
+  - date: ISO string
+  - createdAt: timestamp
 ```
 
 ## Deployment
@@ -98,11 +98,11 @@ firebase deploy --only database
 
 ## Security Considerations
 
-1. **User Enumeration**: While users can list all profiles, this is necessary for the split expense functionality. Consider implementing additional measures if user privacy is a concern.
+1. **Shared Visibility**: All authenticated users can see all purchases and settlements. This is by design for team expense tracking, allowing everyone to see shared expenses and calculate balances.
 
-2. **Data Validation**: All writes are validated to ensure data integrity and prevent invalid data.
+2. **Write Protection**: Users can only create expenses they pay for (paidById = auth.uid) and can only modify/delete their own expenses. This prevents unauthorized modifications while allowing team visibility.
 
-3. **Ownership**: The rules enforce strict ownership - users can only modify their own data.
+3. **Data Validation**: All writes are validated to ensure data integrity and prevent invalid data. The paidById and fromId fields are immutable after creation.
 
 4. **Authentication**: All operations require authentication - anonymous access is not allowed.
 

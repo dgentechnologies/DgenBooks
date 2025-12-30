@@ -34,7 +34,7 @@ export function NetBalanceCard({ balance }: NetBalanceCardProps) {
       <CardContent className="relative z-10">
         <div
           className={`text-2xl sm:text-3xl font-bold transition-colors duration-300 ${
-            isPositive ? "bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" : "text-destructive"
+            isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"
           }`}
           role="status"
           aria-live="polite"

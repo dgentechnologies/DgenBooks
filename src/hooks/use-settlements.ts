@@ -7,7 +7,8 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import type { Settlement } from '@/lib/types';
 
 /**
- * Hook to fetch all settlements for the current user
+ * Hook to fetch all settlements from the shared settlements collection
+ * All authenticated users can see all settlements for team balance tracking
  */
 export function useUserSettlements() {
   const firestore = useFirestore();
@@ -15,7 +16,7 @@ export function useUserSettlements() {
   
   const settlementsQuery = useMemoFirebase(() => {
     if (!user) return null;
-    const settlementsRef = collection(firestore, `users/${user.uid}/settlements`);
+    const settlementsRef = collection(firestore, 'settlements');
     return query(settlementsRef) as Query<DocumentData>;
   }, [firestore, user]);
   

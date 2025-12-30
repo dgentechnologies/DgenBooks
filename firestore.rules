@@ -1,35 +1,23 @@
 /**
- * Core Philosophy: This ruleset enforces a strict user-ownership model. All data,
- * including purchases and settlements, is stored in subcollections under a user's
- * private document. This creates a secure data silo for each user, ensuring that
- * no user can access another user's information.
+ * Core Philosophy: This ruleset uses a shared collections model where purchases
+ * and settlements are stored in top-level collections accessible to all authenticated
+ * users. This allows teams to collaborate and see shared expenses while maintaining
+ * data integrity through validation rules.
  *
- * Data Structure: The data is organized hierarchically under the /users/{userId}
- * path. This top-level document stores the user's profile, and all related
- * entities, like 'purchases' and 'settlements', are stored in subcollections
- * within that user's document tree.
+ * Data Structure: The data is organized in top-level collections:
+ * - /users: User profiles
+ * - /purchases: All team purchases/expenses
+ * - /settlements: All debt settlements
  *
  * Key Security Decisions:
- * - User Enumeration is Disallowed: Listing the top-level /users collection is
- *   explicitly forbidden to protect user privacy.
- * - Strict Path-Based Ownership: A user's authenticated UID must match the
- *   {userId} wildcard in the path to grant any access. This is the primary
- *   security mechanism.
- * - Default Deny: Any operation not explicitly granted is denied. There are no
- *   public collections.
+ * - Shared Read Access: All authenticated users can read purchases and settlements
+ *   to enable team expense tracking and balance calculations.
+ * - Write Protection: Users can only create purchases with their own ID as paidById,
+ *   and can only update/delete their own purchases.
+ * - User Profiles: All authenticated users can read user profiles for split functionality.
  *
- * Denormalization for Authorization: To ensure fast and secure rule evaluation,
- * this ruleset relies on denormalized ownership fields. For example, a document
- * in the `/users/{userId}/purchases` collection must contain a `paidById` field
- * that mirrors the `{userId}` from the path. This avoids costly and slow `get()`
- * calls to parent documents, making authorization checks self-contained and
- * performant.
- *
- * Structural Segregation: The architecture uses separate collections for each
- * entity under a user's path (e.g., `purchases`, `settlements`). This structural
- * separation provides clear, secure boundaries for data access and simplifies
- * list queries, as a user listing their own purchases can never accidentally
- * access another user's data.
+ * Denormalization for Authorization: Documents contain ownership fields (paidById,
+ * fromId) that are validated on write to ensure data integrity and proper attribution.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -46,7 +34,6 @@ service cloud.firestore {
 
     /**
      * Checks if the currently authenticated user's UID matches the given userId.
-     * This is the foundation of the user-ownership model.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
@@ -54,7 +41,6 @@ service cloud.firestore {
 
     /**
      * Ensures an operation is performed by the owner on an existing document.
-     * Prevents modifying or deleting documents that do not exist.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
@@ -76,45 +62,45 @@ service cloud.firestore {
     }
     
     /**
-     * Validates that the purchase document being created has a 'paidById' field
-     * that correctly links it to the user path it is nested under.
+     * Validates that the purchase is being created by the user who paid for it.
      */
-    function isCreatingValidPurchase(userId) {
-      return isOwner(userId) && request.resource.data.paidById == userId;
+    function isCreatingValidPurchase() {
+      return isSignedIn() && request.resource.data.paidById == request.auth.uid;
     }
 
     /**
-     * Validates that the 'paidById' ownership link is immutable on update.
+     * Validates that the purchase is being updated by the user who paid for it,
+     * and that the paidById field is not being changed.
      */
     function isUpdatingValidPurchase() {
-      return request.resource.data.paidById == resource.data.paidById;
+      return isSignedIn() 
+        && resource.data.paidById == request.auth.uid
+        && request.resource.data.paidById == resource.data.paidById;
     }
 
     /**
-     * Validates that the settlement document being created has a 'fromUserId' field
-     * that correctly links it to the user path it is nested under.
+     * Validates that the settlement is being created by the user who is making the payment.
      */
-    function isCreatingValidSettlement(userId) {
-      return isOwner(userId) && request.resource.data.fromUserId == userId;
+    function isCreatingValidSettlement() {
+      return isSignedIn() && request.resource.data.fromId == request.auth.uid;
     }
 
     /**
-     * Validates that the 'fromUserId' ownership link is immutable on update.
+     * Validates that the settlement is being updated by the user who paid,
+     * and that the fromId field is not being changed.
      */
     function isUpdatingValidSettlement() {
-      return request.resource.data.fromUserId == resource.data.fromUserId;
+      return isSignedIn()
+        && resource.data.fromId == request.auth.uid
+        && request.resource.data.fromId == resource.data.fromId;
     }
 
     /**
      * @description Rules for the User profile document.
      * @path /users/{userId}
+     * @allow (read) Any authenticated user can read user profiles for split functionality.
      * @allow (create) An authenticated user creating their own user profile.
-     * @allow (list) Any authenticated user can list users for split functionality.
-     * @principle Enforces self-creation and ownership of a user's own profile document.
-     * 
-     * SECURITY NOTE: User listing is enabled to support expense splitting functionality.
-     * This means all authenticated users can see the names and avatars of other users.
-     * Consider implementing additional privacy controls if this is a concern for your use case.
+     * @allow (update/delete) Users can only modify their own profile.
      */
     match /users/{userId} {
       allow get: if isSignedIn();
@@ -125,33 +111,33 @@ service cloud.firestore {
     }
 
     /**
-     * @description Rules for a user's purchase records.
-     * @path /users/{userId}/purchases/{purchaseId}
-     * @allow (create) An authenticated user creating a purchase record within their own data tree.
-     * @deny (get) User 'A' attempting to read a purchase belonging to User 'B'.
-     * @principle Restricts all access to a user's own data tree and validates relational integrity on write.
+     * @description Rules for shared purchase records.
+     * @path /purchases/{purchaseId}
+     * @allow (read) All authenticated users can read purchases for team tracking.
+     * @allow (create) Authenticated users can create purchases they paid for.
+     * @allow (update/delete) Only the user who paid can update/delete their purchase.
      */
-    match /users/{userId}/purchases/{purchaseId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isCreatingValidPurchase(userId);
-      allow update: if isExistingOwner(userId) && isUpdatingValidPurchase();
-      allow delete: if isExistingOwner(userId);
+    match /purchases/{purchaseId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isCreatingValidPurchase();
+      allow update: if isUpdatingValidPurchase();
+      allow delete: if isSignedIn() && resource.data.paidById == request.auth.uid;
     }
 
     /**
-     * @description Rules for a user's settlement records.
-     * @path /users/{userId}/settlements/{settlementId}
-     * @allow (list) An authenticated user listing their own settlement records.
-     * @deny (create) User 'A' attempting to create a settlement record under User 'B's profile.
-     * @principle Restricts all access to a user's own data tree and validates relational integrity on write.
+     * @description Rules for shared settlement records.
+     * @path /settlements/{settlementId}
+     * @allow (read) All authenticated users can read settlements for balance calculations.
+     * @allow (create) Authenticated users can create settlements they are paying.
+     * @allow (update/delete) Only the user who paid can update/delete their settlement.
      */
-    match /users/{userId}/settlements/{settlementId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isCreatingValidSettlement(userId);
-      allow update: if isExistingOwner(userId) && isUpdatingValidSettlement();
-      allow delete: if isExistingOwner(userId);
+    match /settlements/{settlementId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isCreatingValidSettlement();
+      allow update: if isUpdatingValidSettlement();
+      allow delete: if isSignedIn() && resource.data.fromId == request.auth.uid;
     }
   }
 }

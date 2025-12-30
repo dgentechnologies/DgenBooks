@@ -1,19 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Transaction } from "@/lib/types";
-import { users } from "@/lib/data";
+import type { Transaction, User } from "@/lib/types";
 import { ArrowRightLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getCategoryIcon } from "@/lib/category-icons";
 
 interface RecentActivityProps {
   transactions: Transaction[];
+  users: User[];
 }
 
-const getUser = (id: string) => users.find(u => u.id === id);
+const getUser = (users: User[], id: string) => users.find(u => u.id === id);
 
-export function RecentActivity({ transactions }: RecentActivityProps) {
+export function RecentActivity({ transactions, users }: RecentActivityProps) {
   return (
     <Card className="card-hover h-full" role="region" aria-label="Recent Activity">
       <CardHeader>
@@ -54,7 +54,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                           {transaction.itemName}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                          Paid by {getUser(transaction.paidById)?.name}
+                          Paid by {getUser(users, transaction.paidById)?.name}
                         </p>
                       </>
                     ) : (
@@ -63,7 +63,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                           Settlement
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                          {getUser(transaction.fromId)?.name} → {getUser(transaction.toId)?.name}
+                          {getUser(users, transaction.fromId)?.name} → {getUser(users, transaction.toId)?.name}
                         </p>
                       </>
                     )}

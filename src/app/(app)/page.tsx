@@ -92,7 +92,7 @@ export default function DashboardPage() {
           <AddExpenseCard />
         </div>
         <div className="md:col-span-3 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
-          <RecentActivity transactions={transactions.slice(0, 5)} />
+          <RecentActivity transactions={transactions.slice(0, 5)} users={users} />
         </div>
       </div>
 

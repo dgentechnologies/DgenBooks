@@ -8,10 +8,7 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
     balances.set(user1.id, new Map());
     for (const user2 of users) {
       if (user1.id !== user2.id) {
-        const user1Balance = balances.get(user1.id);
-        if (user1Balance) {
-          user1Balance.set(user2.id, 0);
-        }
+        balances.get(user1.id)!.set(user2.id, 0);
       }
     }
   }
@@ -29,9 +26,9 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
       for (const participantId of splitWith) {
         if (participantId !== paidById && userIds.has(participantId)) {
           const participantBalance = balances.get(participantId);
-          const paidByBalance = participantBalance?.get(paidById);
-          if (participantBalance && paidByBalance !== undefined) {
-            participantBalance.set(paidById, paidByBalance + share);
+          const currentOwedToPayer = participantBalance?.get(paidById);
+          if (currentOwedToPayer !== undefined) {
+            participantBalance!.set(paidById, currentOwedToPayer + share);
           }
         }
       }
@@ -42,8 +39,8 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
       
       const fromBalance = balances.get(fromId);
       const currentOwed = fromBalance?.get(toId);
-      if (fromBalance && currentOwed !== undefined) {
-        fromBalance.set(toId, currentOwed - amount);
+      if (currentOwed !== undefined) {
+        fromBalance!.set(toId, currentOwed - amount);
       }
     }
   }

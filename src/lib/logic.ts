@@ -53,13 +53,13 @@ export function calculateBalances(transactions: Transaction[]): { netBalances: M
     if (netAmount > 0) {
       // user1 owes user2
       debts.push({ from: user1, to: user2, amount: netAmount });
-      netBalances.set(user1.id, netBalances.get(user1.id)! - netAmount);
-      netBalances.set(user2.id, netBalances.get(user2.id)! + netAmount);
+      netBalances.set(user1.id, (netBalances.get(user1.id) ?? 0) - netAmount);
+      netBalances.set(user2.id, (netBalances.get(user2.id) ?? 0) + netAmount);
     } else if (netAmount < 0) {
       // user2 owes user1
       debts.push({ from: user2, to: user1, amount: -netAmount });
-      netBalances.set(user2.id, netBalances.get(user2.id)! - (-netAmount));
-      netBalances.set(user1.id, netBalances.get(user1.id)! + (-netAmount));
+      netBalances.set(user2.id, (netBalances.get(user2.id) ?? 0) - (-netAmount));
+      netBalances.set(user1.id, (netBalances.get(user1.id) ?? 0) + (-netAmount));
     }
   }
   

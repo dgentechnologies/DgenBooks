@@ -1,14 +1,120 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import type { Transaction, User } from "@/lib/types"
+import type { Transaction, User, Purchase } from "@/lib/types"
 import { users } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpDown } from "lucide-react"
+import { ArrowUpDown, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ExpenseForm } from "@/components/expense-form"
+import { deletePurchase } from "@/lib/db/purchases"
+import { useFirestore, useUser } from "@/firebase"
+import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 const getUser = (id: string): User | undefined => users.find(u => u.id === id);
+
+// Action cell component for edit and delete
+function ActionCell({ transaction }: { transaction: Transaction }) {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
+
+  if (transaction.type !== 'purchase') {
+    return null; // Only purchases can be edited/deleted
+  }
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+    try {
+      await deletePurchase(firestore, user.uid, transaction.id);
+      toast({
+        title: "Expense Deleted",
+        description: "The expense has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting purchase:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the expense. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditOpen(false);
+    toast({
+      title: "Expense Updated",
+      description: "The expense has been successfully updated.",
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Edit expense</span>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="w-[95vw] max-w-[425px] sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl">Edit Expense</DialogTitle>
+          </DialogHeader>
+          <ExpenseForm expense={transaction as Purchase} onSuccess={handleEditSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete expense</span>
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{transaction.itemName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
 
 export const columns: ColumnDef<Transaction>[] = [
   {
@@ -109,5 +215,13 @@ export const columns: ColumnDef<Transaction>[] = [
         </div>
         )
     }
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => {
+      const transaction = row.original;
+      return <ActionCell transaction={transaction} />;
+    },
   },
 ]

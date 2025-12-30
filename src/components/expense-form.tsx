@@ -24,7 +24,7 @@ import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useUsers } from "@/hooks/use-users";
 import { useUser, useFirestore } from "@/firebase";
-import { createPurchase } from "@/lib/db";
+import { createPurchase, updatePurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
 import { useState, useEffect } from "react";
 
@@ -95,12 +95,17 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
         splitWith: values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]),
       };
       
-      // Save to Firebase
-      const purchaseId = await createPurchase(firestore, user.uid, purchaseData);
-      
-      // Call the legacy onSave callback if provided
-      if (onSave) {
-        onSave({ id: purchaseId, ...purchaseData });
+      if (expense) {
+        // Update existing purchase
+        await updatePurchase(firestore, user.uid, expense.id, purchaseData);
+      } else {
+        // Create new purchase
+        const purchaseId = await createPurchase(firestore, user.uid, purchaseData);
+        
+        // Call the legacy onSave callback if provided
+        if (onSave) {
+          onSave({ id: purchaseId, ...purchaseData });
+        }
       }
       
       // Call onSuccess if provided
@@ -108,8 +113,10 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
         onSuccess();
       }
       
-      // Reset form
-      form.reset();
+      // Reset form only if not editing
+      if (!expense) {
+        form.reset();
+      }
     } catch (error) {
       console.error('Error saving purchase:', error);
     } finally {

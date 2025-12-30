@@ -79,7 +79,7 @@ service cloud.firestore {
     }
 
     /**
-     * Validates that the settlement is being created by the user who is paying.
+     * Validates that the settlement is being created by the user who is making the payment.
      */
     function isCreatingValidSettlement() {
       return isSignedIn() && request.resource.data.fromId == request.auth.uid;

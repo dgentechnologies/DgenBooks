@@ -59,7 +59,7 @@ The Realtime Database rules are defined in `database.rules.json` and follow a si
   - id: string
   - name: string
   - avatar: string
-  
+
 /purchases/{purchaseId}
   - type: "purchase"
   - itemName: string

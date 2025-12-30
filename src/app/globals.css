@@ -125,6 +125,7 @@
     background: radial-gradient(circle, hsl(180 100% 42% / 0.08) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
+    will-change: transform;
     animation: ambient-float 20s ease-in-out infinite;
   }
   
@@ -138,24 +139,25 @@
     background: radial-gradient(circle, hsl(160 84% 39% / 0.06) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
+    will-change: transform;
     animation: ambient-float-reverse 25s ease-in-out infinite;
   }
   
   @keyframes ambient-float {
     0%, 100% {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0) scale(1);
     }
     50% {
-      transform: translate(-10%, 10%) scale(1.1);
+      transform: translate3d(-10%, 10%, 0) scale(1.1);
     }
   }
   
   @keyframes ambient-float-reverse {
     0%, 100% {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0) scale(1);
     }
     50% {
-      transform: translate(10%, -10%) scale(1.05);
+      transform: translate3d(10%, -10%, 0) scale(1.05);
     }
   }
   

@@ -72,7 +72,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ## 🔐 Security
 
-Security is a top priority for DgenBooks. The application is built with a robust security model to ensure user data is protected.
+Security is a top priority for DgenBooks. The application is built with a robust security model to ensure user data is protected. For more details on reporting vulnerabilities, please see our [Security Policy](SECURITY.md).
 
 - **Strict Firestore Security Rules**: User data is isolated using path-based ownership. Users can only read and write to their own data silos. All write operations are validated on the backend to ensure data integrity.
 - **Secure Authentication**: All routes and API endpoints require authentication via Firebase Auth, preventing any unauthorized access.
@@ -81,7 +81,7 @@ Security is a top priority for DgenBooks. The application is built with a robust
 
 ## 📜 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
 
 ---
 

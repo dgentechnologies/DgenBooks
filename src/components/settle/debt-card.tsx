@@ -2,6 +2,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Handshake } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 import type { Debt } from "@/lib/types";
 import {
   AlertDialog,
@@ -18,16 +21,36 @@ import {
 
 interface DebtCardProps {
   debt: Debt;
-  onSettle: (debt: Debt) => void;
+  onSettle: (debt: Debt, customAmount?: number) => void;
 }
 
 export function DebtCard({ debt, onSettle }: DebtCardProps) {
   const { from, to, amount } = debt;
+  const [customAmount, setCustomAmount] = useState<string>(amount.toFixed(2));
+  const [useCustomAmount, setUseCustomAmount] = useState(false);
 
   const formattedAmount = new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
   }).format(amount);
+
+  // Format name to sentence case (capitalize first letter of each word)
+  const formatName = (name: string) => {
+    return name.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const handleSettle = () => {
+    if (useCustomAmount) {
+      const parsedAmount = parseFloat(customAmount);
+      if (!isNaN(parsedAmount) && parsedAmount > 0) {
+        onSettle(debt, parsedAmount);
+      }
+    } else {
+      onSettle(debt);
+    }
+  };
 
   return (
     <Card className="card-hover gradient-overlay overflow-hidden">
@@ -40,7 +63,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
                 {from.name.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <p className="font-medium text-sm sm:text-base truncate">{from.name}</p>
+            <p className="font-medium text-sm sm:text-base">{formatName(from.name)}</p>
           </div>
           <div className="flex sm:hidden items-center">
             <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90" />
@@ -55,7 +78,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
                 {to.name.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <p className="font-medium text-sm sm:text-base truncate">{to.name}</p>
+            <p className="font-medium text-sm sm:text-base">{formatName(to.name)}</p>
           </div>
         </div>
         <div className="mt-4 sm:mt-6 text-center py-3 sm:py-4 bg-accent/5 rounded-lg">
@@ -76,14 +99,51 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
             <AlertDialogHeader>
               <AlertDialogTitle className="font-headline">Confirm Settlement</AlertDialogTitle>
               <AlertDialogDescription className="text-sm sm:text-base">
-                Are you sure you want to mark this debt as paid? This will record a settlement of {formattedAmount} from {from.name} to {to.name}. This action cannot be undone.
+                {useCustomAmount ? (
+                  <>Record a partial settlement of ₹{customAmount} from {formatName(from.name)} to {formatName(to.name)}.</>
+                ) : (
+                  <>Are you sure you want to mark this debt as paid? This will record a settlement of {formattedAmount} from {formatName(from.name)} to {formatName(to.name)}.</>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="useCustomAmount"
+                  checked={useCustomAmount}
+                  onChange={(e) => setUseCustomAmount(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="useCustomAmount" className="text-sm font-medium cursor-pointer">
+                  Pay custom amount
+                </Label>
+              </div>
+              {useCustomAmount && (
+                <div className="space-y-2">
+                  <Label htmlFor="customAmount">Amount</Label>
+                  <Input
+                    id="customAmount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={amount}
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    placeholder="Enter amount"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Maximum: {formattedAmount}
+                  </p>
+                </div>
+              )}
+            </div>
             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
               <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={() => onSettle(debt)}
+                onClick={handleSettle}
                 className="w-full sm:w-auto"
+                disabled={useCustomAmount && (parseFloat(customAmount) <= 0 || parseFloat(customAmount) > amount)}
               >
                 Confirm
               </AlertDialogAction>

@@ -36,15 +36,16 @@ export default function SettleUpPage() {
 
   const { debts } = useMemo(() => calculateBalances(transactions, users), [transactions, users]);
 
-  const handleSettle = async (debt: Debt) => {
+  const handleSettle = async (debt: Debt, customAmount?: number) => {
     if (!user) return;
     
     try {
+      const settlementAmount = customAmount || debt.amount;
       const settlementData: Omit<Settlement, 'id'> = {
         type: "settlement",
         fromId: debt.from.id,
         toId: debt.to.id,
-        amount: debt.amount,
+        amount: settlementAmount,
         date: new Date().toISOString(),
       };
       
@@ -52,7 +53,7 @@ export default function SettleUpPage() {
       
       toast({
         title: "Debt Settled!",
-        description: `${debt.from.name} paid ${debt.to.name} ₹${debt.amount.toFixed(2)}.`,
+        description: `${debt.from.name} paid ${debt.to.name} ₹${settlementAmount.toFixed(2)}.`,
       });
     } catch (error) {
       console.error('Error settling debt:', error);

@@ -21,6 +21,14 @@ interface TotalSpendingChartProps {
   purchases: Purchase[];
 }
 
+// Premium color palette for different users
+const userColors = [
+  "hsl(var(--chart-1))", // Emerald
+  "hsl(var(--chart-2))", // Indigo
+  "hsl(var(--chart-3))", // Violet
+  "hsl(var(--chart-4))", // Amber
+];
+
 const chartConfig = {
   amount: {
     label: "Amount",
@@ -30,13 +38,14 @@ const chartConfig = {
 
 export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
   const chartData = useMemo(() => {
-    const spendingByUser = users.map(user => {
+    const spendingByUser = users.map((user, index) => {
       const totalSpent = purchases
         .filter(p => p.paidById === user.id)
         .reduce((sum, p) => sum + p.amount, 0);
       return {
         user: user.name,
         amount: totalSpent,
+        fill: userColors[index % userColors.length],
       };
     });
     return spendingByUser;
@@ -58,15 +67,17 @@ export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
                 vertical={false} 
                 strokeDasharray="3 3" 
                 stroke="hsl(var(--border))"
-                opacity={0.3}
+                opacity={0.2}
               />
               <XAxis
                 dataKey="user"
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
                 className="text-xs"
+                angle={-15}
+                textAnchor="end"
+                height={60}
               />
               <Tooltip
                 cursor={{ fill: 'hsl(var(--accent) / 0.1)' }}
@@ -74,7 +85,6 @@ export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
               />
               <Bar
                 dataKey="amount"
-                fill="var(--color-amount)"
                 radius={[8, 8, 0, 0]}
                 animationDuration={800}
                 animationBegin={0}
@@ -83,8 +93,13 @@ export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
           </ChartContainer>
         ) : (
           <div className="flex flex-col items-center justify-center h-[200px] sm:h-[250px] text-center p-4">
-            <p className="text-sm text-muted-foreground">No spending data yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Add expenses to see who paid</p>
+            <div className="rounded-full bg-muted/50 p-4 mb-3">
+              <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">No spending data yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Add expenses to see who paid</p>
           </div>
         )}
       </CardContent>

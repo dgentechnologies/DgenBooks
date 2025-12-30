@@ -73,9 +73,11 @@ export default function DashboardPage() {
     <div className="relative space-y-4 sm:space-y-6 animate-fade-in">
       {/* Welcome Section - Premium touch */}
       <div className="hidden sm:block mb-6">
-        <h2 className="text-2xl font-bold font-headline text-foreground/90">Welcome back!</h2>
-        <p className="text-muted-foreground">
-          Here's an overview of your expenses and balances.
+        <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">
+          Welcome back!
+        </h2>
+        <p className="text-muted-foreground/80 text-base">
+          Here is your financial overview for today.
         </p>
       </div>
 

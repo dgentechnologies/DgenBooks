@@ -78,7 +78,8 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
                 nameKey="name"
                 innerRadius={50}
                 outerRadius={80}
-                strokeWidth={5}
+                strokeWidth={2}
+                stroke="hsl(var(--background))"
                 animationDuration={800}
                 animationBegin={0}
               >
@@ -94,8 +95,14 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
           </ChartContainer>
         ) : (
           <div className="flex flex-col items-center justify-center h-[250px] text-center p-4">
-            <p className="text-sm text-muted-foreground">No spending data yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Add expenses to see the breakdown</p>
+            <div className="rounded-full bg-muted/50 p-4 mb-3">
+              <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">No spending data yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Add expenses to see the breakdown</p>
           </div>
         )}
       </CardContent>

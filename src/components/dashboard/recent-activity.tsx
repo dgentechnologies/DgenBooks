@@ -37,7 +37,11 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                   style={{animationDelay: `${index * 0.05}s`}}
                   role="listitem"
                 >
-                  <div className="rounded-full bg-muted p-2 flex-shrink-0" aria-hidden="true">
+                  <div className={`rounded-full p-2 flex-shrink-0 ${
+                    transaction.type === 'purchase' 
+                      ? 'bg-gradient-to-br from-accent/20 to-accent/10 ring-1 ring-accent/20' 
+                      : 'bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20'
+                  }`} aria-hidden="true">
                     {transaction.type === 'purchase' ? 
                       <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> : 
                       <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}

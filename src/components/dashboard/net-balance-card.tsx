@@ -20,11 +20,11 @@ export function NetBalanceCard({ balance }: NetBalanceCardProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
         <CardTitle className="text-sm font-medium">My Net Balance</CardTitle>
         {isPositive ? (
-          <div className="rounded-full bg-primary/10 p-2" aria-label="Positive balance indicator">
+          <div className="rounded-full bg-gradient-to-br from-primary/20 to-accent/20 p-3 ring-1 ring-primary/20" aria-label="Positive balance indicator">
             <TrendingUp className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
         ) : (
-          <div className="rounded-full bg-destructive/10 p-2" aria-label="Negative balance indicator">
+          <div className="rounded-full bg-gradient-to-br from-destructive/20 to-destructive/10 p-3 ring-1 ring-destructive/20" aria-label="Negative balance indicator">
             <TrendingDown className="h-5 w-5 text-destructive" aria-hidden="true" />
           </div>
         )}
@@ -32,7 +32,7 @@ export function NetBalanceCard({ balance }: NetBalanceCardProps) {
       <CardContent className="relative z-10">
         <div
           className={`text-2xl sm:text-3xl font-bold transition-colors duration-300 ${
-            isPositive ? "text-primary" : "text-destructive"
+            isPositive ? "bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" : "text-destructive"
           }`}
           role="status"
           aria-live="polite"

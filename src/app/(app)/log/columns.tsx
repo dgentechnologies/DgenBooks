@@ -197,7 +197,9 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     cell: ({ row }) => {
         const transaction = row.original;
         if (transaction.type === 'purchase') {
-            if (transaction.splitWith.length === users.length) {
+            // Check if all current Firebase users are included in splitWith
+            const allUsersIncluded = users.length > 0 && users.every(u => transaction.splitWith.includes(u.id));
+            if (allUsersIncluded && transaction.splitWith.length === users.length) {
                 return <Badge variant="secondary">All Members</Badge>
             }
             return <Badge variant="outline">{transaction.splitWith.length} Members</Badge>

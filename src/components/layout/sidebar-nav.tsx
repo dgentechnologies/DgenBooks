@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   Sidebar,
   SidebarHeader,
@@ -46,10 +47,10 @@ export function SidebarNav() {
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <a href={item.href}>
+                <Link href={item.href}>
                   <item.icon />
                   <span>{item.label}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -59,18 +60,18 @@ export function SidebarNav() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings">
-              <a href="/settings">
+              <Link href="/settings">
                 <Settings />
                 <span>Settings</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Profile">
-              <a href="/profile">
+              <Link href="/profile">
                 <CircleUser />
                 <span>Profile</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

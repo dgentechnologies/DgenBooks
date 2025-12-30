@@ -40,7 +40,7 @@ export async function deleteSettlement(
     await deleteDoc(settlementRef);
   } catch (error: any) {
     // Check for Firebase permission denied error
-    if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+    if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
       throw new Error('PERMISSION_DENIED: You can only modify your own settlements.');
     }
     // Re-throw other errors

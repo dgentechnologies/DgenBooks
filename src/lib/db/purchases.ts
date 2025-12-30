@@ -45,7 +45,7 @@ export async function updatePurchase(
     });
   } catch (error: any) {
     // Check for Firebase permission denied error
-    if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+    if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
       throw new Error('PERMISSION_DENIED: You can only modify your own expenses.');
     }
     // Re-throw other errors
@@ -67,7 +67,7 @@ export async function deletePurchase(
     await deleteDoc(purchaseRef);
   } catch (error: any) {
     // Check for Firebase permission denied error
-    if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+    if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
       throw new Error('PERMISSION_DENIED: You can only modify your own expenses.');
     }
     // Re-throw other errors

@@ -9,20 +9,16 @@ import { useUsers } from "@/hooks/use-users";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequestItemForm } from "@/components/request-item-form";
 import { PurchaseRequestCard } from "@/components/purchase-request-card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 
 export default function PurchaseRequestsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { data: requests, isLoading } = usePurchaseRequests();
   const { users, isLoading: usersLoading } = useUsers();
-  const { toast } = useToast();
 
   const handleRequestSuccess = () => {
     setIsAddDialogOpen(false);
-    toast({
-      title: "Request Added",
-      description: "Purchase request has been added successfully.",
-    });
+    toast.success("Request Added", "Purchase request has been added successfully.");
   };
 
   if (isLoading || usersLoading) {

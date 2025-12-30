@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { createUserProfile } from "@/lib/db";
 import { getFullNameFromNickname } from "@/lib/user-mapping";
@@ -22,7 +22,6 @@ export default function LoginPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,10 +29,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({
-        title: "Success",
-        description: "Successfully logged in!",
-      });
+      toast.success("Success", "Successfully logged in!");
       router.push("/");
     } catch (error) {
       let errorMessage = "Failed to login";
@@ -51,11 +47,7 @@ export default function LoginPage() {
           errorMessage = "Invalid email or password";
         }
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -78,10 +70,7 @@ export default function LoginPage() {
         avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
       });
       
-      toast({
-        title: "Success",
-        description: "Successfully logged in with Google!",
-      });
+      toast.success("Success", "Successfully logged in with Google!");
       router.push("/");
     } catch (error) {
       let errorMessage = "Failed to login with Google";
@@ -95,11 +84,7 @@ export default function LoginPage() {
           errorMessage = "Sign-in popup was blocked by your browser";
         }
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }

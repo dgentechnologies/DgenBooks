@@ -20,6 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ExpenseForm } from "@/components/expense-form"
 import { deletePurchase } from "@/lib/db/purchases"
+import { deleteSettlement } from "@/lib/db/settlements"
 import { useFirestore, useUser } from "@/firebase"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
@@ -33,24 +34,28 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
   const { user } = useUser();
   const { toast } = useToast();
 
-  if (transaction.type !== 'purchase') {
-    return null; // Only purchases can be edited/deleted
-  }
-
   const handleDelete = async () => {
     if (!user) return;
     setIsDeleting(true);
     try {
-      await deletePurchase(firestore, user.uid, transaction.id);
-      toast({
-        title: "Expense Deleted",
-        description: "The expense has been successfully deleted.",
-      });
+      if (transaction.type === 'purchase') {
+        await deletePurchase(firestore, user.uid, transaction.id);
+        toast({
+          title: "Expense Deleted",
+          description: "The expense has been successfully deleted.",
+        });
+      } else {
+        await deleteSettlement(firestore, user.uid, transaction.id);
+        toast({
+          title: "Settlement Deleted",
+          description: "The settlement has been successfully deleted.",
+        });
+      }
     } catch (error) {
-      console.error('Error deleting purchase:', error);
+      console.error('Error deleting transaction:', error);
       toast({
         title: "Error",
-        description: "Failed to delete the expense. Please try again.",
+        description: `Failed to delete the ${transaction.type === 'purchase' ? 'expense' : 'settlement'}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -68,33 +73,38 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
 
   return (
     <div className="flex items-center gap-2">
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Pencil className="h-4 w-4" />
-            <span className="sr-only">Edit expense</span>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="w-[95vw] max-w-[425px] sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-headline text-xl">Edit Expense</DialogTitle>
-          </DialogHeader>
-          <ExpenseForm expense={transaction as Purchase} onSuccess={handleEditSuccess} />
-        </DialogContent>
-      </Dialog>
+      {transaction.type === 'purchase' && (
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Edit expense</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="w-[95vw] max-w-[425px] sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-headline text-xl">Edit Expense</DialogTitle>
+            </DialogHeader>
+            <ExpenseForm expense={transaction as Purchase} onSuccess={handleEditSuccess} />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
             <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete expense</span>
+            <span className="sr-only">Delete {transaction.type === 'purchase' ? 'expense' : 'settlement'}</span>
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Expense</AlertDialogTitle>
+            <AlertDialogTitle>Delete {transaction.type === 'purchase' ? 'Expense' : 'Settlement'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{transaction.itemName}"? This action cannot be undone.
+              {transaction.type === 'purchase' 
+                ? `Are you sure you want to delete "${transaction.itemName}"? This action cannot be undone.`
+                : `Are you sure you want to delete this settlement? This action cannot be undone.`
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

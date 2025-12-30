@@ -88,18 +88,24 @@ export function ExpenseForm({ onSave, onSuccess, expense }: ExpenseFormProps) {
     
     setIsLoading(true);
     try {
-      const purchaseData: Omit<Purchase, 'id'> = {
-        type: 'purchase',
-        ...values,
-        date: values.date.toISOString(),
-        splitWith: values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]),
-      };
-      
       if (expense) {
-        // Update existing purchase
-        await updatePurchase(firestore, user.uid, expense.id, purchaseData);
+        // Update existing purchase - exclude id, type, and paidById
+        const updates: Partial<Omit<Purchase, 'id' | 'type' | 'paidById'>> = {
+          itemName: values.itemName,
+          category: values.category,
+          amount: values.amount,
+          date: values.date.toISOString(),
+          splitWith: values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]),
+        };
+        await updatePurchase(firestore, user.uid, expense.id, updates);
       } else {
         // Create new purchase
+        const purchaseData: Omit<Purchase, 'id'> = {
+          type: 'purchase',
+          ...values,
+          date: values.date.toISOString(),
+          splitWith: values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]),
+        };
         const purchaseId = await createPurchase(firestore, user.uid, purchaseData);
         
         // Call the legacy onSave callback if provided

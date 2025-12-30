@@ -96,10 +96,13 @@ export function DataTable<TData, TValue>({
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: (row, columnId, filterValue) => {
       const transaction = row.original as Transaction;
+      // Search in item name for purchases
       if (transaction.type === 'purchase') {
         return transaction.itemName.toLowerCase().includes(filterValue.toLowerCase());
       }
-      return false;
+      // For settlements, search in "settlement" text or return true if no search term
+      if (!filterValue) return true;
+      return 'settlement'.includes(filterValue.toLowerCase());
     },
     state: {
       sorting,

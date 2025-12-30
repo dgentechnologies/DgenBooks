@@ -53,12 +53,12 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
   };
 
   return (
-    <Card className="card-hover gradient-overlay overflow-hidden">
+    <Card className="card-hover gradient-overlay overflow-hidden w-full max-w-full sm:max-w-md mx-auto">
       <CardContent className="p-4 sm:p-6">
         {/* Header: "Who Owes Who" section with responsive layout */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-center gap-6 lg:gap-8 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-4 w-full">
           {/* Payer: Avatar + Name (with truncate for long names) */}
-          <div className="flex items-center gap-3 min-w-0 flex-1 lg:flex-none lg:w-auto">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-primary/20 shrink-0">
               <AvatarImage src={from.avatar} />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold">
@@ -68,16 +68,16 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
             <p className="font-medium text-sm sm:text-base truncate">{formatName(from.name)}</p>
           </div>
 
-          {/* Arrow Icon - visible only on larger screens, vertical on mobile */}
-          <div className="flex lg:hidden justify-center">
+          {/* Arrow Icon - vertical on mobile, horizontal on larger screens */}
+          <div className="flex sm:hidden justify-center">
             <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90 shrink-0" />
           </div>
-          <div className="hidden lg:flex items-center">
+          <div className="hidden sm:flex items-center mx-2">
             <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
           </div>
 
           {/* Payee: Avatar + Name (with truncate for long names) */}
-          <div className="flex items-center gap-3 min-w-0 flex-1 lg:flex-none lg:w-auto">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <Avatar className="h-10 w-10 sm:h-12 sm:w-12 ring-2 ring-accent/20 shrink-0">
               <AvatarImage src={to.avatar} />
               <AvatarFallback className="bg-accent/10 text-accent font-semibold">

@@ -1,5 +1,6 @@
 import { Firestore, doc, setDoc, getDoc, collection, query, getDocs } from 'firebase/firestore';
 import type { User } from '@/lib/types';
+import { getNicknameFromFullName } from '@/lib/user-mapping';
 
 /**
  * Create or update a user profile in Firestore
@@ -9,10 +10,14 @@ export async function createUserProfile(
   userId: string,
   userData: Omit<User, 'id'>
 ): Promise<void> {
+  // Generate nickname from the full name if not provided
+  const nickname = userData.nickname || getNicknameFromFullName(userData.name);
+  
   const userRef = doc(firestore, 'users', userId);
   await setDoc(userRef, {
     id: userId,
     ...userData,
+    nickname,
   });
 }
 

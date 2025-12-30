@@ -2,6 +2,7 @@ export type User = {
   id: string;
   name: string;
   avatar: string;
+  nickname?: string; // Optional nickname field for backwards compatibility
 };
 
 export type Purchase = {

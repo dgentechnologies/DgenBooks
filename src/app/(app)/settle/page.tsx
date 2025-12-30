@@ -7,6 +7,7 @@ import { DebtCard } from "@/components/settle/debt-card";
 import { useToast } from "@/hooks/use-toast";
 import { useUserPurchases } from "@/hooks/use-purchases";
 import { useUserSettlements } from "@/hooks/use-settlements";
+import { useUsers } from "@/hooks/use-users";
 import { useUser, useFirestore } from "@/firebase";
 import { createSettlement } from "@/lib/db";
 import { Loader2 } from "lucide-react";
@@ -19,6 +20,7 @@ export default function SettleUpPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  const { users, isLoading: usersLoading } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -32,7 +34,7 @@ export default function SettleUpPage() {
     return allTransactions;
   }, [purchases, settlements]);
 
-  const { debts } = useMemo(() => calculateBalances(transactions), [transactions]);
+  const { debts } = useMemo(() => calculateBalances(transactions, users), [transactions, users]);
 
   const handleSettle = async (debt: Debt) => {
     if (!user) return;
@@ -62,7 +64,7 @@ export default function SettleUpPage() {
     }
   };
 
-  if (purchasesLoading || settlementsLoading) {
+  if (purchasesLoading || settlementsLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />

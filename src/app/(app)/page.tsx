@@ -11,6 +11,7 @@ import { calculateBalances } from "@/lib/logic";
 import { useRouter } from "next/navigation";
 import { useUserPurchases } from "@/hooks/use-purchases";
 import { useUserSettlements } from "@/hooks/use-settlements";
+import { useUsers } from "@/hooks/use-users";
 import { useUser } from "@/firebase";
 import { Loader2 } from "lucide-react";
 
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  const { users, isLoading: usersLoading } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -37,7 +39,7 @@ export default function DashboardPage() {
     );
   }, [purchases, settlements]);
 
-  const { netBalances } = useMemo(() => calculateBalances(transactions), [transactions]);
+  const { netBalances } = useMemo(() => calculateBalances(transactions, users), [transactions, users]);
   const myNetBalance = netBalances?.get(user?.uid || '') || 0;
 
   // Keyboard shortcuts
@@ -61,7 +63,7 @@ export default function DashboardPage() {
   
   const purchasesList = useMemo(() => transactions.filter(t => t.type === 'purchase'), [transactions]);
 
-  if (purchasesLoading || settlementsLoading) {
+  if (purchasesLoading || settlementsLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />

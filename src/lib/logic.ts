@@ -1,7 +1,6 @@
 import type { Transaction, User, Debt } from './types';
-import { users } from './data';
 
-export function calculateBalances(transactions: Transaction[]): { netBalances: Map<string, number>, debts: Debt[] } {
+export function calculateBalances(transactions: Transaction[], users: User[]): { netBalances: Map<string, number>, debts: Debt[] } {
   const balances = new Map<string, Map<string, number>>();
 
   for (const user1 of users) {

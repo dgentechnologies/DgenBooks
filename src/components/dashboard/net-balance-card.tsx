@@ -7,10 +7,12 @@ interface NetBalanceCardProps {
 
 export function NetBalanceCard({ balance }: NetBalanceCardProps) {
   const isPositive = balance >= 0;
+  const sign = isPositive ? "+" : "-";
+  const absoluteBalance = Math.abs(balance);
   const formattedBalance = new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-  }).format(balance);
+  }).format(absoluteBalance);
 
   return (
     <Card className="card-hover gradient-overlay overflow-hidden relative" role="region" aria-label="Net Balance Summary">
@@ -37,7 +39,7 @@ export function NetBalanceCard({ balance }: NetBalanceCardProps) {
           role="status"
           aria-live="polite"
         >
-          {formattedBalance}
+          {sign}{formattedBalance}
         </div>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           {isPositive ? "You are owed money" : "You owe money"}

@@ -3,8 +3,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Transaction } from "@/lib/types";
 import { users } from "@/lib/data";
-import { ShoppingCart, ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { getCategoryIcon } from "@/lib/category-icons";
 
 interface RecentActivityProps {
   transactions: Transaction[];
@@ -30,6 +31,8 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
           <div className="space-y-3" role="list">
             {transactions.map((transaction, index) => {
               const date = new Date(transaction.date);
+              const CategoryIcon = transaction.type === 'purchase' ? getCategoryIcon(transaction.category) : ArrowRightLeft;
+              const iconColor = transaction.type === 'purchase' ? 'text-accent' : 'text-primary';
               return (
                 <div 
                   key={transaction.id} 
@@ -42,9 +45,7 @@ export function RecentActivity({ transactions }: RecentActivityProps) {
                       ? 'bg-gradient-to-br from-accent/20 to-accent/10 ring-1 ring-accent/20' 
                       : 'bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20'
                   }`} aria-hidden="true">
-                    {transaction.type === 'purchase' ? 
-                      <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> : 
-                      <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
+                    <CategoryIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
                   </div>
                   <div className="flex-grow min-w-0">
                     {transaction.type === 'purchase' ? (

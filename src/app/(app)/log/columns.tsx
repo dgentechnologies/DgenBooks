@@ -23,6 +23,7 @@ import { deletePurchase } from "@/lib/db/purchases"
 import { useFirestore, useUser } from "@/firebase"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
+import { getCategoryIcon } from "@/lib/category-icons"
 
 // Action cell component for edit and delete
 function ActionCell({ transaction }: { transaction: Transaction }) {
@@ -140,10 +141,16 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     cell: ({ row }) => {
       const transaction = row.original;
       if (transaction.type === 'purchase') {
+        const CategoryIcon = getCategoryIcon(transaction.category);
         return (
-            <div>
-                <div className="font-medium">{transaction.itemName}</div>
-                <div className="text-sm text-muted-foreground">{transaction.category}</div>
+            <div className="flex items-center gap-2">
+                <div className="rounded-full p-1.5 bg-accent/10 flex-shrink-0">
+                  <CategoryIcon className="h-4 w-4 text-accent" />
+                </div>
+                <div>
+                  <div className="font-medium">{transaction.itemName}</div>
+                  <div className="text-sm text-muted-foreground">{transaction.category}</div>
+                </div>
             </div>
         )
       }

@@ -32,7 +32,7 @@ export function AddExpenseCard() {
         
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
           <CardTitle className="text-sm font-medium">Add Expense</CardTitle>
-          <div className="rounded-full bg-primary/10 p-2" aria-label="Add expense action">
+          <div className="rounded-full bg-primary/10 p-2">
             <Plus className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
         </CardHeader>

@@ -87,7 +87,7 @@ export default function DashboardPage() {
         <div className="animate-slide-in-right" style={{animationDelay: '0.2s'}}>
           <NetBalanceCard balance={myNetBalance} />
         </div>
-        <div className="md:col-span-2 lg:col-span-1 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
+        <div className="md:col-span-2 lg:col-span-3 animate-slide-in-right" style={{animationDelay: '0.3s'}}>
           <RecentActivity transactions={transactions.slice(0, 5)} />
         </div>
       </div>

@@ -35,8 +35,9 @@ export function getFullNameFromNickname(nickname: string): string {
     return mapping.fullName;
   }
   
-  // If no mapping found, return the nickname with first letter capitalized
-  return nickname.charAt(0).toUpperCase() + nickname.slice(1);
+  // If no mapping found, return the nickname with first letter capitalized and rest in lowercase
+  const trimmed = nickname.trim();
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 }
 
 /**
@@ -57,7 +58,9 @@ export function getNicknameFromFullName(fullName: string): string {
   }
   
   // If no mapping found, return the first word of the full name in lowercase
-  return fullName.split(' ')[0].toLowerCase();
+  // Filter out empty strings from split to handle multiple consecutive spaces
+  const words = fullName.trim().split(/\s+/).filter(word => word.length > 0);
+  return words.length > 0 ? words[0].toLowerCase() : '';
 }
 
 /**

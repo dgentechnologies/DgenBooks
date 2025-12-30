@@ -13,12 +13,12 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import type { Purchase } from "@/lib/types";
-import { users } from "@/lib/data";
+import type { Purchase, User } from "@/lib/types";
 import { useMemo } from "react";
 
 interface TotalSpendingChartProps {
   purchases: Purchase[];
+  users: User[];
 }
 
 // Premium color palette for different users
@@ -36,7 +36,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function TotalSpendingChart({ purchases }: TotalSpendingChartProps) {
+export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps) {
   const chartData = useMemo(() => {
     const spendingByUser = users.map((user, index) => {
       const totalSpent = purchases

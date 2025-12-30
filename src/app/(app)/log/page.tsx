@@ -37,8 +37,24 @@ export default function ExpenseLogPage() {
     if (filter === 'all') {
       return transactions;
     }
-    // Filter for expenses paid by current user
-    return transactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+    
+    if (filter === 'my-spending') {
+      // Show only expenses paid by current user
+      return transactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+    }
+    
+    if (filter === 'involved') {
+      // Show expenses where user is involved (in splitWith array)
+      return transactions.filter(t => {
+        if (t.type === 'purchase') {
+          return t.splitWith.includes(user?.uid || '');
+        }
+        // For settlements, show if user is either sender or receiver
+        return t.fromId === user?.uid || t.toId === user?.uid;
+      });
+    }
+    
+    return transactions;
   }, [transactions, filter, user]);
 
   if (purchasesLoading || settlementsLoading) {
@@ -57,9 +73,10 @@ export default function ExpenseLogPage() {
           <p className="text-sm text-muted-foreground">View and manage all expenses</p>
         </div>
         <Tabs value={filter} onValueChange={setFilter} className="w-full sm:w-auto">
-          <TabsList className="grid w-full sm:w-auto grid-cols-2">
+          <TabsList className="grid w-full sm:w-auto grid-cols-3">
             <TabsTrigger value="all" className="text-sm">All Expenses</TabsTrigger>
-            <TabsTrigger value="my" className="text-sm">My Expenses</TabsTrigger>
+            <TabsTrigger value="my-spending" className="text-sm">My Spending</TabsTrigger>
+            <TabsTrigger value="involved" className="text-sm">Involved In</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>

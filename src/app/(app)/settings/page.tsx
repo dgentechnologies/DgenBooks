@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, LogOut, Settings as SettingsIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { AlertTriangle, LogOut, Settings as SettingsIcon, Bell, BellOff } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,10 +20,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { signOut } from "firebase/auth";
 import { toast } from "@/lib/toast";
+import { useNotificationToken } from "@/hooks/useNotificationToken";
+import { NotificationPermissionDialog } from "@/components/notification-permission-dialog";
 
 export default function SettingsPage() {
   const auth = useAuth();
   const router = useRouter();
+  const {
+    permission,
+    isSupported,
+    isLoading,
+    requestPermission,
+    revokePermission,
+  } = useNotificationToken();
+  
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const notificationsEnabled = permission === 'granted';
 
   const handleLogout = async () => {
     try {
@@ -33,6 +46,26 @@ export default function SettingsPage() {
       console.error("Error logging out:", error);
       toast.error("Error", "Failed to log out. Please try again.");
     }
+  };
+
+  const handleNotificationToggle = async (checked: boolean) => {
+    if (checked) {
+      // Show soft prompt first
+      setShowPermissionDialog(true);
+    } else {
+      // Disable notifications
+      await revokePermission();
+    }
+  };
+
+  const handleAllowNotifications = async () => {
+    setShowPermissionDialog(false);
+    await requestPermission();
+  };
+
+  const handleLaterNotifications = () => {
+    setShowPermissionDialog(false);
+    toast.info("No Problem", "You can enable notifications anytime from Settings");
   };
 
   return (
@@ -46,6 +79,14 @@ export default function SettingsPage() {
           Manage your application preferences and account settings.
         </p>
       </div>
+
+      {/* Notification Permission Dialog */}
+      <NotificationPermissionDialog
+        open={showPermissionDialog}
+        onOpenChange={setShowPermissionDialog}
+        onAllow={handleAllowNotifications}
+        onLater={handleLaterNotifications}
+      />
 
       {/* App Preferences Card */}
       <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right">
@@ -73,17 +114,36 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Notifications Section (Placeholder) */}
+            {/* Notifications Section */}
             <div className="flex items-center justify-between py-2 border-t border-white/5">
-              <div>
-                <p className="font-medium">Notifications</p>
-                <p className="text-sm text-muted-foreground">
-                  Manage notification preferences
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  {notificationsEnabled ? (
+                    <Bell className="h-4 w-4 text-primary" />
+                  ) : (
+                    <BellOff className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <p className="font-medium">Push Notifications</p>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {notificationsEnabled
+                    ? "Get notified about expenses, requests, and settlements"
+                    : isSupported
+                    ? "Enable notifications to stay updated"
+                    : "Not supported in this browser"}
                 </p>
+                {notificationsEnabled && (
+                  <p className="text-xs text-primary/70 mt-1">
+                    ✓ Notifications enabled on this device
+                  </p>
+                )}
               </div>
-              <div className="text-sm text-muted-foreground">
-                Coming soon
-              </div>
+              <Switch
+                checked={notificationsEnabled}
+                onCheckedChange={handleNotificationToggle}
+                disabled={!isSupported || isLoading}
+                className="ml-4"
+              />
             </div>
 
             {/* Language Section (Placeholder) */}

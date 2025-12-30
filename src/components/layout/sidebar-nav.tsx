@@ -58,15 +58,19 @@ export function SidebarNav() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings />
-              <span>Settings</span>
+            <SidebarMenuButton asChild tooltip="Settings">
+              <a href="/settings">
+                <Settings />
+                <span>Settings</span>
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Profile">
-              <CircleUser />
-              <span>Profile</span>
+            <SidebarMenuButton asChild tooltip="Profile">
+              <a href="/profile">
+                <CircleUser />
+                <span>Profile</span>
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

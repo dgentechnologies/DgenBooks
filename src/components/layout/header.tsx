@@ -15,12 +15,15 @@ import { SidebarTrigger } from "../ui/sidebar";
 import { LogOut } from "lucide-react";
 import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/toast";
 
 function getTitleFromPathname(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/log")) return "Expense Log";
   if (pathname.startsWith("/settle")) return "Settle Up";
+  if (pathname.startsWith("/profile")) return "Profile";
+  if (pathname.startsWith("/settings")) return "Settings";
+  if (pathname.startsWith("/requests")) return "Purchase List";
   return "DgenBooks";
 }
 
@@ -30,22 +33,14 @@ export function Header() {
   const { user } = useUser();
   const auth = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
+      toast.success("Logged out", "You have been successfully logged out.");
       router.push("/auth/login");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to log out",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to log out");
     }
   };
 
@@ -80,8 +75,12 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/profile")}>
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/settings")}>
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"

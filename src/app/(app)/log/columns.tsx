@@ -22,7 +22,7 @@ import { ExpenseForm } from "@/components/expense-form"
 import { deletePurchase } from "@/lib/db/purchases"
 import { deleteSettlement } from "@/lib/db/settlements"
 import { useFirestore, useUser } from "@/firebase"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "@/lib/toast"
 import { useState } from "react"
 import { getCategoryIcon } from "@/lib/category-icons"
 
@@ -32,7 +32,6 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const firestore = useFirestore();
   const { user } = useUser();
-  const { toast } = useToast();
 
   const handleDelete = async () => {
     if (!user) return;
@@ -40,24 +39,20 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
     try {
       if (transaction.type === 'purchase') {
         await deletePurchase(firestore, user.uid, transaction.id);
-        toast({
-          title: "Expense Deleted",
-          description: "The expense has been successfully deleted.",
-        });
+        toast.success("Expense Deleted", "The expense has been successfully deleted.");
       } else {
         await deleteSettlement(firestore, user.uid, transaction.id);
-        toast({
-          title: "Settlement Deleted",
-          description: "The settlement has been successfully deleted.",
-        });
+        toast.success("Settlement Deleted", "The settlement has been successfully deleted.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting transaction:', error);
-      toast({
-        title: "Error",
-        description: `Failed to delete the ${transaction.type === 'purchase' ? 'expense' : 'settlement'}. Please try again.`,
-        variant: "destructive",
-      });
+      
+      // Check for permission denied error
+      if (error?.message?.includes('PERMISSION_DENIED')) {
+        toast.error("Action Denied", "You can only modify your own expenses.");
+      } else {
+        toast.error("Error", `Failed to delete the ${transaction.type === 'purchase' ? 'expense' : 'settlement'}. Please try again.`);
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -65,10 +60,7 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
 
   const handleEditSuccess = () => {
     setIsEditOpen(false);
-    toast({
-      title: "Expense Updated",
-      description: "The expense has been successfully updated.",
-    });
+    toast.success("Expense Updated", "The expense has been successfully updated.");
   };
 
   return (

@@ -50,6 +50,13 @@ You need to generate a VAPID key for web push notifications:
 const VAPID_KEY = 'YOUR_GENERATED_VAPID_KEY_HERE';
 ```
 
+**Security Note:** The VAPID key is currently hardcoded in the hook. For production use, consider:
+- Moving it to an environment variable (e.g., `NEXT_PUBLIC_FIREBASE_VAPID_KEY`)
+- Loading it from Firebase Remote Config
+- Using a secure configuration management system
+
+The current implementation is acceptable for initial deployment but should be improved for production security best practices.
+
 ### 2. Install Cloud Functions Dependencies
 
 ```bash

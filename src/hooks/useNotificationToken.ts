@@ -7,8 +7,13 @@ import { firebaseApp } from '@/firebase/config';
 import { useFirestore, useAuth, useUser } from '@/firebase';
 import { toast } from '@/lib/toast';
 
-// VAPID key - You need to generate this in Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-const VAPID_KEY = 'BKm9qGVxZ8ZQJxGQXh3j0Vh_yqKqH5_5cL5HL3cJqVhHJgQH6jJ5qHwJzKm5L6qJzH5qJwJ5qHzJmLqH5J6qHz'; // Replace with your actual VAPID key
+// Service worker path - centralized constant
+const SERVICE_WORKER_PATH = '/firebase-messaging-sw.js';
+
+// VAPID key - IMPORTANT: Replace this with your actual VAPID key from Firebase Console
+// Generate at: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+// TODO: Move to environment variable for better security
+const VAPID_KEY = 'YOUR_VAPID_KEY_HERE_REPLACE_WITH_ACTUAL_KEY_FROM_FIREBASE_CONSOLE';
 
 export interface NotificationState {
   permission: NotificationPermission;
@@ -120,10 +125,10 @@ export function useNotificationToken() {
       }
 
       // Register service worker if not already registered
-      let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      let registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_PATH);
       
       if (!registration) {
-        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, {
           scope: '/',
         });
         console.log('Service Worker registered:', registration);
@@ -155,9 +160,9 @@ export function useNotificationToken() {
       } else {
         throw new Error('No registration token available');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error getting notification permission:', error);
-      const errorMessage = error?.message || 'Failed to enable notifications';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to enable notifications';
       setState(prev => ({
         ...prev,
         isLoading: false,

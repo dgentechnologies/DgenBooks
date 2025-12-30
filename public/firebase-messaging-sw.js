@@ -5,6 +5,8 @@ importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js');
 
 // Initialize Firebase in the service worker
+// Note: Service workers don't have access to environment variables
+// This configuration matches the client-side config in src/firebase/config.ts
 firebase.initializeApp({
   apiKey: "AIzaSyBrQ8CJrO0cRlmW_aI4qg1xxf0bg7AoIeQ",
   authDomain: "dgenbooks.firebaseapp.com",

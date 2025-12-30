@@ -90,7 +90,8 @@ export const onPurchaseCreated = functions.firestore
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users who are split with (excluding the payer)
-      const usersToNotify = purchase.splitWith.filter((userId: string) => userId !== purchase.paidById);
+      // Safely handle the case where splitWith might be undefined or null
+      const usersToNotify = (purchase.splitWith || []).filter((userId: string) => userId !== purchase.paidById);
 
       // Send notification to each user
       const notificationPromises = usersToNotify.map((userId: string) => {

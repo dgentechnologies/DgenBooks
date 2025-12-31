@@ -43,8 +43,8 @@ export function SidebarNav() {
   return (
     <Sidebar>
       <SidebarContent>
-        <SidebarHeader>
-          <div className="p-4">
+        <SidebarHeader className="border-b border-white/5">
+          <div className="p-6">
             <Image 
               src="/images/logo.png" 
               alt="DgenBooks Logo" 

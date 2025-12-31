@@ -67,13 +67,13 @@ export default {
         },
       },
       height: {
-        'screen-mobile': ['100vh', '100dvh'],
+        'screen-mobile': '100dvh',
       },
       minHeight: {
-        'screen-mobile': ['100vh', '100dvh'],
+        'screen-mobile': '100dvh',
       },
       maxHeight: {
-        'screen-mobile': ['100vh', '100dvh'],
+        'screen-mobile': '100dvh',
       },
       spacing: {
         'safe-top': 'env(safe-area-inset-top)',

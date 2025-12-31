@@ -4,28 +4,28 @@
 
 @layer base {
   :root {
-    /* Deep dark mode base - Premium slate palette */
-    --background: 222 47% 4%;
+    /* Premium Dark Mode - Deep midnight blue gradient */
+    --background: 222 84% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 8%;
+    --card: 217 33% 14%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 6%;
+    --popover: 222 84% 6%;
     --popover-foreground: 210 40% 98%;
 
-    /* Emerald/Teal gradient primary */
-    --primary: 160 84% 39%;
+    /* Electric Blue primary - for logo "D" */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 33% 12%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217 33% 12%;
-    --muted-foreground: 215 20% 55%;
+    --muted-foreground: 215 16% 47%;
 
-    /* Teal accent */
-    --accent: 180 100% 42%;
+    /* Cyan accent */
+    --accent: 189 94% 43%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -33,50 +33,50 @@
 
     --border: 217 33% 15%;
     --input: 217 33% 15%;
-    --ring: 160 84% 39%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.75rem;
+    --radius: 1.5rem;
 
-    /* Premium chart colors: Emerald, Indigo, Violet, Amber, Rose */
-    --chart-1: 160 84% 39%;
-    --chart-2: 239 84% 67%;
-    --chart-3: 258 90% 66%;
+    /* Premium chart colors: Purple, Cyan, Green */
+    --chart-1: 271 81% 56%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 142 76% 36%;
     --chart-4: 43 96% 56%;
     --chart-5: 351 95% 71%;
 
-    --sidebar-background: 222 47% 4%;
+    --sidebar-background: 222 84% 5%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 222 47% 10%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 12%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .dark {
-    /* Deep dark mode base - Premium slate palette */
-    --background: 222 47% 4%;
+    /* Premium Dark Mode - Deep midnight blue gradient */
+    --background: 222 84% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 8%;
+    --card: 217 33% 14%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 6%;
+    --popover: 222 84% 6%;
     --popover-foreground: 210 40% 98%;
 
-    /* Emerald/Teal gradient primary */
-    --primary: 160 84% 39%;
+    /* Electric Blue primary - for logo "D" */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 33% 12%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217 33% 12%;
-    --muted-foreground: 215 20% 55%;
+    --muted-foreground: 215 16% 47%;
 
-    /* Teal accent */
-    --accent: 180 100% 42%;
+    /* Cyan accent */
+    --accent: 189 94% 43%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -84,23 +84,23 @@
 
     --border: 217 33% 15%;
     --input: 217 33% 15%;
-    --ring: 160 84% 39%;
+    --ring: 217 91% 60%;
 
-    /* Premium chart colors: Emerald, Indigo, Violet, Amber, Rose */
-    --chart-1: 160 84% 39%;
-    --chart-2: 239 84% 67%;
-    --chart-3: 258 90% 66%;
+    /* Premium chart colors: Purple, Cyan, Green */
+    --chart-1: 271 81% 56%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 142 76% 36%;
     --chart-4: 43 96% 56%;
     --chart-5: 351 95% 71%;
 
-    --sidebar-background: 222 47% 4%;
+    --sidebar-background: 222 84% 5%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 210 40% 98%;
     --sidebar-accent: 222 47% 10%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 12%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -120,7 +120,8 @@
   }
   
   body {
-    @apply bg-background text-foreground custom-scrollbar;
+    @apply text-foreground custom-scrollbar;
+    background: linear-gradient(to bottom, rgb(15 23 42), rgb(2 6 23));
     transition: background-color 0.3s ease;
     position: relative;
     /* Prevent overscroll bounce for app-like feel */

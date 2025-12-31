@@ -21,31 +21,23 @@ interface TotalSpendingChartProps {
   users: User[];
 }
 
-// Premium color palette for different users
-const userColors = [
-  "hsl(var(--chart-1))", // Emerald
-  "hsl(var(--chart-2))", // Indigo
-  "hsl(var(--chart-3))", // Violet
-  "hsl(var(--chart-4))", // Amber
-];
-
 const chartConfig = {
   amount: {
     label: "Amount",
-    color: "hsl(var(--chart-1))",
+    color: "#8b5cf6",
   },
 } satisfies ChartConfig;
 
 export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps) {
   const chartData = useMemo(() => {
-    const spendingByUser = users.map((user, index) => {
+    const spendingByUser = users.map((user) => {
       const totalSpent = purchases
         .filter(p => p.paidById === user.id)
         .reduce((sum, p) => sum + p.amount, 0);
       return {
         user: user.name,
         amount: totalSpent,
-        fill: userColors[index % userColors.length],
+        fill: "url(#purpleGradient)",
       };
     });
     return spendingByUser;
@@ -54,19 +46,25 @@ export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps
   const hasData = purchases.length > 0;
 
   return (
-    <Card className="h-full card-hover">
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Total Spending (Team)</CardTitle>
-        <CardDescription>Who paid for what.</CardDescription>
+        <CardDescription className="text-slate-400">Who paid for what</CardDescription>
       </CardHeader>
       <CardContent>
         {hasData ? (
           <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
             <BarChart accessibilityLayer data={chartData}>
+              <defs>
+                <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.6} />
+                </linearGradient>
+              </defs>
               <CartesianGrid 
                 vertical={false} 
                 strokeDasharray="3 3" 
-                stroke="hsl(var(--border))"
+                stroke="rgba(148, 163, 184, 0.1)"
                 opacity={0.2}
               />
               <XAxis
@@ -78,9 +76,10 @@ export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps
                 angle={-15}
                 textAnchor="end"
                 height={60}
+                stroke="#94a3b8"
               />
               <Tooltip
-                cursor={{ fill: 'hsl(var(--accent) / 0.1)' }}
+                cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }}
                 content={<ChartTooltipContent indicator="dot" />}
               />
               <Bar

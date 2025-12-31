@@ -72,12 +72,19 @@ self.addEventListener('notificationclick', (event) => {
   const urlFromData = event.notification.data?.url || '/';
   console.log('SW: URL from data:', urlFromData);
   
-  // Handle both relative and absolute URLs
+  // Handle both relative and absolute URLs, but enforce same-origin for absolute URLs
   let urlToOpen;
   try {
-    // If it's already an absolute URL with protocol, use it directly
+    // If it's already an absolute URL with protocol
     if (urlFromData.startsWith('http://') || urlFromData.startsWith('https://')) {
-      urlToOpen = urlFromData;
+      const parsedUrl = new URL(urlFromData);
+      // Security check: only allow same-origin absolute URLs
+      if (parsedUrl.origin === self.location.origin) {
+        urlToOpen = urlFromData;
+      } else {
+        console.warn('SW: Blocked external URL:', urlFromData);
+        urlToOpen = new URL('/', self.location.origin).href;
+      }
     } else {
       // Otherwise, treat as relative path and construct with origin
       urlToOpen = new URL(urlFromData, self.location.origin).href;

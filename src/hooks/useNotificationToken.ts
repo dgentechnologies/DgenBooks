@@ -160,17 +160,17 @@ export function useNotificationToken() {
       // Wait for service worker to be ready with timeout for mobile
       console.log('⏳ Waiting for service worker to be ready...');
       const swReadyPromise = navigator.serviceWorker.ready;
-      let timeoutId: NodeJS.Timeout | null = null;
+      let timeoutId: number | null = null;
       const timeoutPromise = new Promise<ServiceWorkerRegistration>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Service Worker timeout')), 10000);
+        timeoutId = window.setTimeout(() => reject(new Error('Service Worker timeout')), 10000);
       });
       
       try {
         const result = await Promise.race([swReadyPromise, timeoutPromise]);
-        if (timeoutId) clearTimeout(timeoutId);
+        if (timeoutId) window.clearTimeout(timeoutId);
         console.log('✅ Service Worker is ready');
       } catch (timeoutError) {
-        if (timeoutId) clearTimeout(timeoutId);
+        if (timeoutId) window.clearTimeout(timeoutId);
         console.warn('⚠️ Service Worker ready timeout, proceeding anyway');
       }
 

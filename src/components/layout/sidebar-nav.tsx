@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   Sidebar,
@@ -44,15 +43,11 @@ export function SidebarNav() {
     <Sidebar>
       <SidebarContent>
         <SidebarHeader className="border-b border-white/5">
-          <div className="p-6">
-            <Image 
-              src="/images/logo.png" 
-              alt="DgenBooks Logo" 
-              width={120} 
-              height={30}
-              className="mix-blend-screen"
-              style={{ filter: 'invert(1) brightness(1.1)' }}
-            />
+          <div className="p-6 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
+              <span className="text-white font-bold text-xl">D</span>
+            </div>
+            <span className="text-white font-semibold text-lg">DgenBooks</span>
           </div>
         </SidebarHeader>
         <SidebarMenu>

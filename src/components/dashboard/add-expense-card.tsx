@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,26 +18,17 @@ export function AddExpenseCard() {
   return (
     <>
       <Card 
-        className="card-hover gradient-overlay overflow-hidden relative cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]" 
+        className="border-dashed border-2 border-slate-600 cursor-pointer transition-all hover:brightness-110 bg-transparent" 
         role="button" 
         aria-label="Add New Expense"
         onClick={() => setIsFormOpen(true)}
       >
-        {/* Subtle animated gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 animate-pulse-soft opacity-50" aria-hidden="true" />
-        
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-          <CardTitle className="text-sm font-medium">Add Expense</CardTitle>
-          <div className="rounded-full bg-gradient-to-br from-primary/20 to-accent/20 p-3 ring-1 ring-primary/20">
-            <Plus className="h-5 w-5 text-primary" aria-hidden="true" />
+        <CardContent className="flex flex-col items-center justify-center min-h-[200px] p-8">
+          <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4 hover:bg-slate-700 transition-colors">
+            <Plus className="h-8 w-8 text-slate-300" aria-hidden="true" />
           </div>
-        </CardHeader>
-        <CardContent className="relative z-10">
-          <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            New
-          </div>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Click to add a new expense
+          <p className="text-sm text-slate-400 font-medium">
+            Add Expense
           </p>
         </CardContent>
       </Card>

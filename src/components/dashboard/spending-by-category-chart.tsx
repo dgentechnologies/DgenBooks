@@ -7,7 +7,6 @@ import {
   Cell,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from "recharts";
 
 import {
@@ -19,7 +18,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  ChartContainer,
   ChartTooltipContent,
+  type ChartConfig,
 } from "@/components/ui/chart";
 import type { Purchase } from "@/lib/types";
 import { useMemo } from "react";
@@ -30,6 +31,12 @@ interface SpendingByCategoryChartProps {
 
 // Premium color palette: Purple, Cyan, Green
 const COLORS = ["#8b5cf6", "#06b6d4", "#10b981"];
+
+const chartConfig = {
+  value: {
+    label: "Amount",
+  },
+} satisfies ChartConfig;
 
 export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartProps) {
   const chartData = useMemo(() => {
@@ -57,44 +64,42 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
       </CardHeader>
       <CardContent className="flex-1 pb-0 flex items-center justify-center">
         {chartData.length > 0 ? (
-          <div className="w-full h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Tooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel nameKey="name" />}
-                />
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  strokeWidth={4}
-                  stroke="rgba(15, 23, 42, 0.9)"
-                  animationDuration={800}
-                  animationBegin={0}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.fill}
-                      className="hover:opacity-80 transition-opacity cursor-pointer"
-                    />
-                  ))}
-                </Pie>
-                <Legend 
-                  verticalAlign="middle" 
-                  align="right"
-                  layout="vertical"
-                  iconType="circle"
-                  wrapperStyle={{ paddingLeft: '20px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <PieChart>
+              <Tooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel nameKey="name" />}
+              />
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                strokeWidth={4}
+                stroke="rgba(15, 23, 42, 0.9)"
+                animationDuration={800}
+                animationBegin={0}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.fill}
+                    className="hover:opacity-80 transition-opacity cursor-pointer"
+                  />
+                ))}
+              </Pie>
+              <Legend 
+                verticalAlign="middle" 
+                align="right"
+                layout="vertical"
+                iconType="circle"
+                wrapperStyle={{ paddingLeft: '20px' }}
+              />
+            </PieChart>
+          </ChartContainer>
         ) : (
           <div className="flex flex-col items-center justify-center h-[250px] text-center p-4">
             <div className="rounded-full bg-muted/50 p-4 mb-3">

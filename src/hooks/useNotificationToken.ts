@@ -147,22 +147,30 @@ export function useNotificationToken() {
         console.log('✅ Service Worker registered:', registration);
       } catch (swError) {
         console.error('❌ Service Worker registration failed:', swError);
-        // Try alternate registration without scope
-        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('✅ Service Worker registered (retry):', registration);
+        try {
+          // Try alternate registration without scope
+          registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          console.log('✅ Service Worker registered (retry):', registration);
+        } catch (retryError) {
+          console.error('❌ Service Worker registration retry also failed:', retryError);
+          throw new Error('Failed to register service worker after retry');
+        }
       }
 
       // Wait for service worker to be ready with timeout for mobile
       console.log('⏳ Waiting for service worker to be ready...');
       const swReadyPromise = navigator.serviceWorker.ready;
-      const timeoutPromise = new Promise<ServiceWorkerRegistration>((_, reject) => 
-        setTimeout(() => reject(new Error('Service Worker timeout')), 10000)
-      );
+      let timeoutId: NodeJS.Timeout | null = null;
+      const timeoutPromise = new Promise<ServiceWorkerRegistration>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Service Worker timeout')), 10000);
+      });
       
       try {
-        await Promise.race([swReadyPromise, timeoutPromise]);
+        const result = await Promise.race([swReadyPromise, timeoutPromise]);
+        if (timeoutId) clearTimeout(timeoutId);
         console.log('✅ Service Worker is ready');
       } catch (timeoutError) {
+        if (timeoutId) clearTimeout(timeoutId);
         console.warn('⚠️ Service Worker ready timeout, proceeding anyway');
       }
 

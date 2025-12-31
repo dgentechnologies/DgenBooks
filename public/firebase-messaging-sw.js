@@ -69,7 +69,24 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   // Get the URL to open from notification data
-  const urlToOpen = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  const urlFromData = event.notification.data?.url || '/';
+  console.log('SW: URL from data:', urlFromData);
+  
+  // Handle both relative and absolute URLs
+  let urlToOpen;
+  try {
+    // If it's already an absolute URL with protocol, use it directly
+    if (urlFromData.startsWith('http://') || urlFromData.startsWith('https://')) {
+      urlToOpen = urlFromData;
+    } else {
+      // Otherwise, treat as relative path and construct with origin
+      urlToOpen = new URL(urlFromData, self.location.origin).href;
+    }
+  } catch (error) {
+    console.error('SW: Error parsing URL:', error);
+    urlToOpen = new URL('/', self.location.origin).href;
+  }
+  
   console.log('SW: Opening URL:', urlToOpen);
   
   // Handle action button clicks

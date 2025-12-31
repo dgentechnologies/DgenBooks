@@ -108,10 +108,27 @@
   * {
     @apply border-border;
   }
+  
+  /* Root-level mobile optimizations */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  
   body {
     @apply bg-background text-foreground custom-scrollbar;
     transition: background-color 0.3s ease;
     position: relative;
+    /* Safe area support for notched devices */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Prevent overscroll bounce for app-like feel */
+    overscroll-behavior-y: contain;
+    /* Optimize mobile scrolling */
+    -webkit-overflow-scrolling: touch;
   }
   
   /* Ambient glow effect - subtle radial gradient blob */
@@ -163,6 +180,26 @@
   
   .glassmorphic-card {
     @apply bg-card/50 backdrop-blur-lg border;
+  }
+  
+  /* Mobile-specific touch optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    /* Increase touch target size on mobile */
+    button, a, input, select, textarea {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Remove focus outlines on touch devices */
+    *:focus {
+      outline: none;
+    }
+    
+    /* Better tap feedback */
+    button:active, a:active {
+      transform: scale(0.98);
+      transition: transform 0.1s ease;
+    }
   }
 }
 
@@ -270,5 +307,102 @@
 
   .animate-pulse-soft {
     animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Mobile-optimized utilities */
+  .mobile-safe-area-top {
+    padding-top: max(env(safe-area-inset-top), 1rem);
+  }
+  
+  .mobile-safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+  
+  .mobile-safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Pull-to-refresh indicator styling */
+  .ptr-element {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, hsl(var(--background)), transparent);
+    opacity: 0;
+    transform: translateY(-100%);
+    transition: all 0.3s ease;
+  }
+  
+  /* App-like bottom navigation */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid hsl(var(--border));
+    z-index: 50;
+  }
+  
+  /* Swipe gesture hints */
+  .swipeable {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .swipeable:active {
+    cursor: grabbing;
+  }
+  
+  /* Mobile-optimized input fields */
+  @media (max-width: 768px) {
+    input, textarea, select {
+      font-size: 16px; /* Prevent zoom on iOS */
+      border-radius: 0.5rem;
+    }
+    
+    /* Optimize modal/dialog for mobile */
+    [role="dialog"], [role="alertdialog"] {
+      max-width: calc(100vw - 2rem);
+      max-height: calc(100vh - 4rem);
+      margin: auto;
+    }
+  }
+  
+  /* Loading states with better mobile feedback */
+  .loading-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted) / 0.8) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  
+  /* Native-like scrollable containers */
+  .native-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 }

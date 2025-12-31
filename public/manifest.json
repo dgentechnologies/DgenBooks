@@ -3,10 +3,14 @@
   "short_name": "DgenBooks",
   "description": "Premium Corporate Expense & Reimbursement Tracker",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#020617",
   "theme_color": "#6366f1",
   "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "edge_side_panel": {},
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -39,5 +43,47 @@
       "purpose": "any"
     }
   ],
-  "categories": ["finance", "productivity", "business"]
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "short_name": "Add",
+      "description": "Quickly add a new expense",
+      "url": "/log",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Settle Up",
+      "short_name": "Settle",
+      "description": "Settle balances with team",
+      "url": "/settle",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "View expense dashboard",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "categories": ["finance", "productivity", "business"],
+  "screenshots": [],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

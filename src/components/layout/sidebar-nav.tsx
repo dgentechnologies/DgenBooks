@@ -50,8 +50,8 @@ export function SidebarNav() {
               alt="DgenBooks Logo" 
               width={120} 
               height={30}
-              className="mix-blend-screen brightness-110"
-              style={{ filter: 'invert(1)' }}
+              className="mix-blend-screen"
+              style={{ filter: 'invert(1) brightness(1.1)' }}
             />
           </div>
         </SidebarHeader>

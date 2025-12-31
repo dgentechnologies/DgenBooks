@@ -48,7 +48,7 @@ export function Header() {
   const userName = user?.displayName || user?.email || "User";
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 backdrop-blur-lg md:px-6 transition-all">
+    <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 backdrop-blur-lg md:px-6 transition-all mobile-safe-area-top mobile-safe-area-x">
       <div className="md:hidden">
         <SidebarTrigger />
       </div>

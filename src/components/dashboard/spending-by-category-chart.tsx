@@ -19,8 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  ChartConfig,
-  ChartContainer,
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { Purchase } from "@/lib/types";
@@ -34,26 +32,19 @@ interface SpendingByCategoryChartProps {
 const COLORS = ["#8b5cf6", "#06b6d4", "#10b981"];
 
 export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartProps) {
-  const { chartData, chartConfig } = useMemo(() => {
+  const chartData = useMemo(() => {
     const categoryTotals = purchases.reduce((acc, purchase) => {
       acc[purchase.category] = (acc[purchase.category] || 0) + purchase.amount;
       return acc;
     }, {} as Record<string, number>);
 
-    const data = Object.entries(categoryTotals).map(([category, total]) => ({
+    const data = Object.entries(categoryTotals).map(([category, total], index) => ({
       name: category,
       value: total,
+      fill: COLORS[index % COLORS.length],
     })).sort((a, b) => b.value - a.value);
 
-    const config: ChartConfig = data.reduce((acc, item, index) => {
-      acc[item.name] = {
-        label: item.name,
-        color: COLORS[index % COLORS.length],
-      };
-      return acc;
-    }, {} as ChartConfig);
-
-    return { chartData: data, chartConfig: config };
+    return data;
   }, [purchases]);
 
   const totalSpent = useMemo(() => chartData.reduce((acc, curr) => acc + curr.value, 0), [chartData]);
@@ -89,7 +80,7 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={COLORS[index % COLORS.length]}
+                      fill={entry.fill}
                       className="hover:opacity-80 transition-opacity cursor-pointer"
                     />
                   ))}

@@ -158,7 +158,7 @@ export function useNotificationToken() {
       });
 
       if (token) {
-        console.log('✅ FCM token obtained:', token.substring(0, 20) + '...');
+        console.log('✅ FCM token obtained');
         await saveTokenToFirestore(token);
         
         setState(prev => ({
@@ -220,9 +220,7 @@ export function useNotificationToken() {
         console.log('📬 Notification details - Title:', title, 'Body:', body);
         
         // Show toast notification for foreground messages
-        toast.info(title, body, {
-          duration: 6000, // Show for 6 seconds
-        });
+        toast.info(title, body);
 
         // ALWAYS show browser notification in foreground for better visibility
         if (Notification.permission === 'granted') {

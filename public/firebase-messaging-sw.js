@@ -46,9 +46,12 @@ messaging.onBackgroundMessage((payload) => {
       url: payload.data?.url || '/',
       type: payload.data?.type || 'general',
       itemId: payload.data?.itemId || null,
+      timestamp: Date.now(), // Add timestamp for debugging
     },
     actions: payload.data?.actions ? JSON.parse(payload.data.actions) : [],
     requireInteraction: payload.data?.requireInteraction === 'true',
+    renotify: true, // Allow re-showing notification with same tag
+    silent: false, // Ensure sound plays
   };
 
   console.log('SW: Showing notification with title:', notificationTitle);
@@ -66,7 +69,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   // Get the URL to open from notification data
-  const urlToOpen = event.notification.data?.url || '/';
+  const urlToOpen = new URL(event.notification.data?.url || '/', self.location.origin).href;
   console.log('SW: Opening URL:', urlToOpen);
   
   // Handle action button clicks
@@ -75,7 +78,7 @@ self.addEventListener('notificationclick', (event) => {
     // You can handle specific actions here
   }
 
-  // Open or focus the app window
+  // Open or focus the app window with better mobile support
   event.waitUntil(
     clients.matchAll({
       type: 'window',
@@ -83,25 +86,53 @@ self.addEventListener('notificationclick', (event) => {
     }).then((clientList) => {
       console.log('SW: Found', clientList.length, 'client windows');
       
-      // Check if there's already a window open
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i];
-        if (client.url.includes(self.registration.scope) && 'focus' in client) {
+      // Filter clients to only those on the same origin
+      const sameOriginClients = clientList.filter(client => {
+        try {
+          const clientUrl = new URL(client.url);
+          return clientUrl.origin === self.location.origin;
+        } catch (e) {
+          return false;
+        }
+      });
+      
+      console.log('SW: Same origin clients:', sameOriginClients.length);
+      
+      // Check if there's already a window open on same origin
+      for (let i = 0; i < sameOriginClients.length; i++) {
+        const client = sameOriginClients[i];
+        console.log('SW: Checking client:', client.url);
+        
+        if ('focus' in client) {
           console.log('SW: Focusing existing window');
           // Focus the existing window and navigate to the URL
           return client.focus().then(() => {
             if ('navigate' in client) {
               console.log('SW: Navigating to:', urlToOpen);
               return client.navigate(urlToOpen);
+            } else {
+              // Fallback: post message to client to navigate
+              console.log('SW: Posting message to client for navigation');
+              client.postMessage({
+                type: 'NAVIGATE',
+                url: urlToOpen
+              });
             }
+            return client;
           });
         }
       }
+      
       // If no window is open, open a new one
       if (clients.openWindow) {
         console.log('SW: Opening new window');
         return clients.openWindow(urlToOpen);
       }
+      
+      console.warn('SW: Could not open or focus window');
+      return null;
+    }).catch(error => {
+      console.error('SW: Error handling notification click:', error);
     })
   );
 });

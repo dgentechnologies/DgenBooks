@@ -135,17 +135,36 @@ export function useNotificationToken() {
         return null;
       }
 
-      // Register service worker
+      // Register service worker with retry logic for mobile
       console.log('🔧 Registering service worker...');
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/',
-      });
-      console.log('✅ Service Worker registered:', registration);
+      let registration: ServiceWorkerRegistration;
+      
+      try {
+        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+          scope: '/',
+          updateViaCache: 'none', // Always fetch fresh SW for notifications
+        });
+        console.log('✅ Service Worker registered:', registration);
+      } catch (swError) {
+        console.error('❌ Service Worker registration failed:', swError);
+        // Try alternate registration without scope
+        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('✅ Service Worker registered (retry):', registration);
+      }
 
-      // Wait for service worker to be ready
+      // Wait for service worker to be ready with timeout for mobile
       console.log('⏳ Waiting for service worker to be ready...');
-      await navigator.serviceWorker.ready;
-      console.log('✅ Service Worker is ready');
+      const swReadyPromise = navigator.serviceWorker.ready;
+      const timeoutPromise = new Promise<ServiceWorkerRegistration>((_, reject) => 
+        setTimeout(() => reject(new Error('Service Worker timeout')), 10000)
+      );
+      
+      try {
+        await Promise.race([swReadyPromise, timeoutPromise]);
+        console.log('✅ Service Worker is ready');
+      } catch (timeoutError) {
+        console.warn('⚠️ Service Worker ready timeout, proceeding anyway');
+      }
 
       // Get FCM token
       console.log('🔑 Getting FCM token...');
@@ -200,6 +219,19 @@ export function useNotificationToken() {
         }));
 
         toast.success('Notifications Enabled', 'You will now receive push notifications');
+        
+        // Test notification to confirm setup
+        try {
+          new Notification('🎉 Notifications Enabled!', {
+            body: 'You\'ll now receive updates about expenses and settlements',
+            icon: '/icon-192x192.png',
+            badge: '/icon-192x192.png',
+            tag: 'test-notification',
+          });
+        } catch (testError) {
+          console.warn('Could not show test notification:', testError);
+        }
+        
         return token;
       } else {
         // Token is null (likely due to IndexedDB issue), but permission was granted

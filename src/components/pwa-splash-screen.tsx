@@ -14,7 +14,7 @@ export function PWASplashScreen() {
   useEffect(() => {
     // Check if running as PWA
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                         (window.navigator as any).standalone ||
+                         ('standalone' in window.navigator && (window.navigator as any).standalone === true) ||
                          document.referrer.includes('android-app://');
     
     setIsPWA(isStandalone);

@@ -66,6 +66,21 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
       },
+      height: {
+        'screen-mobile': ['100vh', '100dvh'],
+      },
+      minHeight: {
+        'screen-mobile': ['100vh', '100dvh'],
+      },
+      maxHeight: {
+        'screen-mobile': ['100vh', '100dvh'],
+      },
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

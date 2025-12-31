@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarContent,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
 import {
@@ -30,13 +31,28 @@ const menuItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  // Close sidebar on mobile when a link is clicked
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarHeader>
-          <div className="p-2">
-            <Image src="/images/logo.png" alt="DgenBooks Logo" width={120} height={30} />
+          <div className="p-4">
+            <Image 
+              src="/images/logo.png" 
+              alt="DgenBooks Logo" 
+              width={120} 
+              height={30}
+              className="mix-blend-screen"
+              style={{ filter: 'invert(1) brightness(1.1)' }}
+            />
           </div>
         </SidebarHeader>
         <SidebarMenu>
@@ -47,7 +63,7 @@ export function SidebarNav() {
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <Link href={item.href}>
+                <Link href={item.href} onClick={handleLinkClick}>
                   <item.icon />
                   <span>{item.label}</span>
                 </Link>
@@ -60,7 +76,7 @@ export function SidebarNav() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings">
-              <Link href="/settings">
+              <Link href="/settings" onClick={handleLinkClick}>
                 <Settings />
                 <span>Settings</span>
               </Link>
@@ -68,7 +84,7 @@ export function SidebarNav() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Profile">
-              <Link href="/profile">
+              <Link href="/profile" onClick={handleLinkClick}>
                 <CircleUser />
                 <span>Profile</span>
               </Link>

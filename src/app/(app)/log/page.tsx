@@ -77,13 +77,15 @@ export default function ExpenseLogPage() {
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight font-headline">Expense Log</h2>
           <p className="text-sm text-muted-foreground">View and manage all expenses</p>
         </div>
-        <Tabs value={filter} onValueChange={setFilter} className="w-full sm:w-auto">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3">
-            <TabsTrigger value="all" className="text-sm">All Expenses</TabsTrigger>
-            <TabsTrigger value="my-spending" className="text-sm">My Spending</TabsTrigger>
-            <TabsTrigger value="involved" className="text-sm">Involved In</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide pr-4">
+          <Tabs value={filter} onValueChange={setFilter} className="w-full sm:w-auto">
+            <TabsList className="inline-flex w-auto">
+              <TabsTrigger value="all" className="text-sm whitespace-nowrap">All Expenses</TabsTrigger>
+              <TabsTrigger value="my-spending" className="text-sm whitespace-nowrap">My Spending</TabsTrigger>
+              <TabsTrigger value="involved" className="text-sm whitespace-nowrap">Involved In</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
       <div className="rounded-lg border bg-card card-hover">
         <DataTable columns={columns} data={filteredTransactions} users={users} />

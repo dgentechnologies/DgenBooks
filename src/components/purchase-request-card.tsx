@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertCircle, Clock, DollarSign, User, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Clock, IndianRupee, User, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { ExpenseForm } from "@/components/expense-form";
 import { toast } from "@/lib/toast";
@@ -73,8 +73,8 @@ export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps
           
           {request.estimatedCost && (
             <div className="flex items-center text-muted-foreground">
-              <DollarSign className="h-4 w-4 mr-2" />
-              <span>Est. Cost: ${request.estimatedCost.toFixed(2)}</span>
+              <IndianRupee className="h-4 w-4 mr-2" />
+              <span>Est. Cost: ₹{request.estimatedCost.toFixed(2)}</span>
             </div>
           )}
           

@@ -7,12 +7,8 @@ import { firebaseApp } from '@/firebase/config';
 import { useFirestore, useAuth, useUser } from '@/firebase';
 import { toast } from '@/lib/toast';
 
-// Service worker path - centralized constant
-const SERVICE_WORKER_PATH = '/firebase-messaging-sw.js';
-
 // VAPID key - IMPORTANT: Replace this with your actual VAPID key from Firebase Console
 // Generate at: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-// TODO: Move to environment variable for better security
 const VAPID_KEY = 'BFZE4SK3p9z7CaJ3dwvdlPmvSTWZfGAKNmqviBXjNv2bJls8bf0ThRXCpjopXzU4S1q2Z9bFKRSZsBT2ePIgEuQ';
 
 export interface NotificationState {
@@ -45,6 +41,15 @@ export function useNotificationToken() {
         'serviceWorker' in navigator &&
         'PushManager' in window;
 
+      console.log('Notification Support Check:', {
+        hasWindow: typeof window !== 'undefined',
+        hasNotification: 'Notification' in window,
+        hasServiceWorker: 'serviceWorker' in navigator,
+        hasPushManager: 'PushManager' in window,
+        isSupported,
+        currentPermission: isSupported ? Notification.permission : 'denied',
+      });
+
       setState(prev => ({
         ...prev,
         isSupported,
@@ -70,9 +75,9 @@ export function useNotificationToken() {
           fcmTokens: arrayUnion(token),
           lastTokenUpdate: new Date().toISOString(),
         });
-        console.log('FCM token saved to Firestore');
+        console.log('✅ FCM token saved to Firestore');
       } catch (error) {
-        console.error('Error saving FCM token to Firestore:', error);
+        console.error('❌ Error saving FCM token to Firestore:', error);
         throw error;
       }
     },
@@ -91,9 +96,9 @@ export function useNotificationToken() {
         await updateDoc(userRef, {
           fcmTokens: arrayRemove(token),
         });
-        console.log('FCM token removed from Firestore');
+        console.log('✅ FCM token removed from Firestore');
       } catch (error) {
-        console.error('Error removing FCM token from Firestore:', error);
+        console.error('❌ Error removing FCM token from Firestore:', error);
       }
     },
     [auth.currentUser, firestore]
@@ -101,8 +106,11 @@ export function useNotificationToken() {
 
   // Request notification permission and get token
   const requestPermission = useCallback(async (): Promise<string | null> => {
+    console.log('🔔 Starting notification permission request...');
+    
     if (!state.isSupported) {
       const error = 'Push notifications are not supported in this browser';
+      console.error('❌', error);
       setState(prev => ({ ...prev, error }));
       toast.error('Not Supported', error);
       return null;
@@ -112,9 +120,12 @@ export function useNotificationToken() {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       // Request permission
+      console.log('📝 Requesting notification permission...');
       const permission = await Notification.requestPermission();
+      console.log('📝 Permission result:', permission);
       
       if (permission !== 'granted') {
+        console.warn('⚠️ Permission not granted:', permission);
         setState(prev => ({
           ...prev,
           permission,
@@ -124,20 +135,22 @@ export function useNotificationToken() {
         return null;
       }
 
-      // Register service worker if not already registered
-      let registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_PATH);
-      
-      if (!registration) {
-        registration = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, {
-          scope: '/',
-        });
-        console.log('Service Worker registered:', registration);
-      }
+      // Register service worker
+      console.log('🔧 Registering service worker...');
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/',
+      });
+      console.log('✅ Service Worker registered:', registration);
 
       // Wait for service worker to be ready
+      console.log('⏳ Waiting for service worker to be ready...');
       await navigator.serviceWorker.ready;
+      console.log('✅ Service Worker is ready');
 
       // Get FCM token
+      console.log('🔑 Getting FCM token...');
+      console.log('🔑 Using VAPID key:', VAPID_KEY);
+      
       const messaging = getMessaging(firebaseApp);
       const token = await getToken(messaging, {
         vapidKey: VAPID_KEY,
@@ -145,7 +158,7 @@ export function useNotificationToken() {
       });
 
       if (token) {
-        console.log('FCM token obtained:', token);
+        console.log('✅ FCM token obtained');
         await saveTokenToFirestore(token);
         
         setState(prev => ({
@@ -161,7 +174,7 @@ export function useNotificationToken() {
         throw new Error('No registration token available');
       }
     } catch (error) {
-      console.error('Error getting notification permission:', error);
+      console.error('❌ Error getting notification permission:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to enable notifications';
       setState(prev => ({
         ...prev,
@@ -175,6 +188,7 @@ export function useNotificationToken() {
 
   // Revoke notification permission (remove token)
   const revokePermission = useCallback(async () => {
+    console.log('🔕 Revoking notification permission...');
     if (state.token) {
       await removeTokenFromFirestore(state.token);
       setState(prev => ({
@@ -183,6 +197,7 @@ export function useNotificationToken() {
         permission: 'default',
       }));
       toast.info('Notifications Disabled', 'You will no longer receive push notifications');
+      console.log('✅ Notifications disabled');
     }
   }, [state.token, removeTokenFromFirestore]);
 
@@ -193,33 +208,62 @@ export function useNotificationToken() {
     }
 
     try {
+      console.log('👂 Setting up foreground message listener...');
       const messaging = getMessaging(firebaseApp);
       
       const unsubscribe = onMessage(messaging, (payload: MessagePayload) => {
-        console.log('Foreground message received:', payload);
+        console.log('📬 Foreground message received:', payload);
         
         const title = payload.notification?.title || 'DgenBooks';
         const body = payload.notification?.body || '';
         
+        console.log('📬 Notification details - Title:', title, 'Body:', body);
+        
         // Show toast notification for foreground messages
         toast.info(title, body);
 
-        // Optionally show browser notification even in foreground
-        if (Notification.permission === 'granted' && payload.notification) {
-          new Notification(title, {
-            body,
-            icon: '/icon-192x192.png',
-            badge: '/icon-192x192.png',
-            data: payload.data,
-          });
+        // ALWAYS show browser notification in foreground for better visibility
+        if (Notification.permission === 'granted') {
+          console.log('🔔 Creating browser notification...');
+          try {
+            const notification = new Notification(title, {
+              body,
+              icon: '/icon-192x192.png',
+              badge: '/icon-192x192.png',
+              tag: payload.data?.type || 'foreground-notification',
+              data: payload.data,
+              requireInteraction: false, // Auto-dismiss after a while
+            });
+
+            // Handle notification click in foreground
+            notification.onclick = (event) => {
+              console.log('🖱️ Foreground notification clicked');
+              event.preventDefault();
+              window.focus();
+              const url = payload.data?.url || '/';
+              if (url && url !== window.location.pathname) {
+                window.location.href = url;
+              }
+              notification.close();
+            };
+
+            console.log('✅ Browser notification created');
+          } catch (error) {
+            console.error('❌ Error creating browser notification:', error);
+          }
+        } else {
+          console.warn('⚠️ Cannot show browser notification - permission not granted');
         }
       });
 
+      console.log('✅ Foreground message listener set up');
+
       return () => {
+        console.log('🔕 Cleaning up foreground message listener');
         unsubscribe();
       };
     } catch (error) {
-      console.error('Error setting up foreground message handler:', error);
+      console.error('❌ Error setting up foreground message handler:', error);
     }
   }, [state.isSupported, auth.currentUser]);
 

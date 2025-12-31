@@ -114,6 +114,9 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     touch-action: manipulation;
+    /* Mobile viewport height fix */
+    height: 100%;
+    height: calc(var(--vh, 1vh) * 100);
   }
   
   body {
@@ -129,6 +132,9 @@
     overscroll-behavior-y: contain;
     /* Optimize mobile scrolling */
     -webkit-overflow-scrolling: touch;
+    /* Mobile viewport height */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
   }
   
   /* Ambient glow effect - subtle radial gradient blob */
@@ -199,6 +205,13 @@
     button:active, a:active {
       transform: scale(0.98);
       transition: transform 0.1s ease;
+    }
+  }
+  
+  /* Smooth scrolling for in-page navigation */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
     }
   }
 }

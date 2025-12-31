@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase";
 import { MobileViewportFix } from "@/components/mobile-viewport-fix";
 import { PWASplashScreen } from "@/components/pwa-splash-screen";
+import { ServiceWorkerListener } from "@/components/service-worker-listener";
 
 export const metadata: Metadata = {
   title: 'DgenBooks',
@@ -84,6 +85,7 @@ export default function RootLayout({
         <MobileViewportFix />
         <PWASplashScreen />
         <FirebaseClientProvider>
+          <ServiceWorkerListener />
           {children}
           <Toaster />
         </FirebaseClientProvider>

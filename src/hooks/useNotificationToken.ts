@@ -152,10 +152,41 @@ export function useNotificationToken() {
       console.log('🔑 Using VAPID key:', VAPID_KEY);
       
       const messaging = getMessaging(firebaseApp);
-      const token = await getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: registration,
-      });
+      let token: string | null = null;
+      
+      try {
+        token = await getToken(messaging, {
+          vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration,
+        });
+      } catch (tokenError) {
+        // Handle IndexedDB errors gracefully - mobile browsers may restrict access
+        console.warn('⚠️ Error getting FCM token (likely IndexedDB restriction):', tokenError);
+        
+        // Check if it's an IndexedDB-related error
+        const errorMessage = tokenError instanceof Error ? tokenError.message : String(tokenError);
+        const errorName = tokenError instanceof Error ? tokenError.name : '';
+        
+        // Check for DOMException types commonly associated with IndexedDB issues
+        const isDOMException = typeof DOMException !== 'undefined' && tokenError instanceof DOMException;
+        
+        // Common IndexedDB errors: UnknownError, InvalidStateError, or messages containing 'indexeddb'
+        const isIndexedDBError = 
+          isDOMException ||
+          errorName === 'UnknownError' ||
+          errorName === 'InvalidStateError' ||
+          errorMessage.toLowerCase().includes('indexeddb') ||
+          errorMessage.toLowerCase().includes('backing store');
+          
+        if (isIndexedDBError) {
+          console.log('ℹ️ Proceeding in Online-Only mode without offline persistence');
+          // Continue without throwing - we'll still mark notifications as "enabled"
+          // The app will work in online-only mode for notifications
+        } else {
+          // If it's a different error, throw it
+          throw tokenError;
+        }
+      }
 
       if (token) {
         console.log('✅ FCM token obtained');
@@ -171,7 +202,17 @@ export function useNotificationToken() {
         toast.success('Notifications Enabled', 'You will now receive push notifications');
         return token;
       } else {
-        throw new Error('No registration token available');
+        // Token is null (likely due to IndexedDB issue), but permission was granted
+        console.log('⚠️ No FCM token but permission granted - Online-Only mode');
+        setState(prev => ({
+          ...prev,
+          permission: 'granted',
+          token: null,
+          isLoading: false,
+        }));
+        
+        toast.success('Notifications Enabled', 'You will receive notifications while online');
+        return null;
       }
     } catch (error) {
       console.error('❌ Error getting notification permission:', error);

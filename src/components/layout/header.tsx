@@ -48,9 +48,11 @@ export function Header() {
   const userName = user?.displayName || user?.email || "User";
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 backdrop-blur-lg md:px-6 transition-all mobile-safe-area-top mobile-safe-area-x">
+    <header className="sticky top-0 z-10 flex min-h-[5rem] items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 py-4 backdrop-blur-lg md:px-6 transition-all mobile-safe-area-top mobile-safe-area-x">
       <div className="md:hidden">
-        <SidebarTrigger />
+        <div className="rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm p-1.5">
+          <SidebarTrigger className="h-8 w-8" />
+        </div>
       </div>
       <h1 className="text-lg sm:text-xl md:text-2xl font-semibold font-headline truncate flex-1 md:flex-none">{title}</h1>
       <div className="ml-auto flex items-center gap-2 sm:gap-4">

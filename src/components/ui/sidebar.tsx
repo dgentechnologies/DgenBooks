@@ -198,7 +198,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-slate-800/50 backdrop-blur-md p-0 text-sidebar-foreground [&>button]:hidden transition-transform duration-300 ease-in-out h-[100dvh] fixed inset-y-0 border-white/5"
+            className="w-[--sidebar-width] bg-slate-900/95 backdrop-blur-xl p-0 text-sidebar-foreground [&>button]:hidden transition-transform duration-300 ease-in-out h-[100dvh] fixed inset-y-0 border-r border-white/10 shadow-2xl"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -206,7 +206,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <div className="flex h-full w-full flex-col pb-24">{children}</div>
+            <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
       )
@@ -373,7 +373,7 @@ const SidebarFooter = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="footer"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-2 mt-auto border-t border-white/5", className)}
       {...props}
     />
   )

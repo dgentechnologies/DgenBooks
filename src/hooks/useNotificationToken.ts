@@ -167,8 +167,12 @@ export function useNotificationToken() {
         const errorMessage = tokenError instanceof Error ? tokenError.message : String(tokenError);
         const errorName = tokenError instanceof Error ? tokenError.name : '';
         
+        // Check for DOMException types commonly associated with IndexedDB issues
+        const isDOMException = typeof DOMException !== 'undefined' && tokenError instanceof DOMException;
+        
         // Common IndexedDB errors: UnknownError, InvalidStateError, or messages containing 'indexeddb'
         const isIndexedDBError = 
+          isDOMException ||
           errorName === 'UnknownError' ||
           errorName === 'InvalidStateError' ||
           errorMessage.toLowerCase().includes('indexeddb') ||

@@ -165,7 +165,7 @@ export function useNotificationToken() {
         
         // Check if it's an IndexedDB-related error
         const errorMessage = tokenError instanceof Error ? tokenError.message : String(tokenError);
-        if (errorMessage.includes('indexedDB') || errorMessage.includes('IndexedDB')) {
+        if (errorMessage.toLowerCase().includes('indexeddb')) {
           console.log('ℹ️ Proceeding in Online-Only mode without offline persistence');
           // Continue without throwing - we'll still mark notifications as "enabled"
           // The app will work in online-only mode for notifications

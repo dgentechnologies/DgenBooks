@@ -6,6 +6,7 @@ import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switcher1 } from "@/components/ui/switcher1";
+import { CategoryManagement } from "@/components/settings/category-management";
 import { AlertTriangle, LogOut, Settings as SettingsIcon, Bell, BellOff } from "lucide-react";
 import {
   AlertDialog,
@@ -162,6 +163,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Category Management Card */}
+      <CategoryManagement />
 
       {/* Danger Zone Card */}
       <Card className="bg-red-950/20 backdrop-blur-xl border-red-500/30 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.1s'}}>

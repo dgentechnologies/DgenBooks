@@ -23,8 +23,10 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useUsers } from "@/hooks/use-users";
+import { useCategories } from "@/hooks/use-categories";
 import { useUser, useFirestore } from "@/firebase";
 import { createPurchase, updatePurchase } from "@/lib/db";
+import { initializeDefaultCategories } from "@/lib/db/categories";
 import type { Purchase } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { getCategoryIcon } from "@/lib/category-icons";
@@ -50,11 +52,10 @@ interface ExpenseFormProps {
   };
 }
 
-const categories = ["Food", "Software", "Business", "Travel", "Other"];
-
 export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { users, isLoading: usersLoading } = useUsers();
+  const { categories, isLoading: categoriesLoading } = useCategories();
   const { user } = useUser();
   const firestore = useFirestore();
 
@@ -84,6 +85,13 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
       form.setValue('splitWith', users.map((u) => u.id));
     }
   }, [users, expense, form]);
+
+  // Initialize categories if none exist
+  useEffect(() => {
+    if (user && firestore && categories.length === 0 && !categoriesLoading) {
+      initializeDefaultCategories(firestore, user.uid);
+    }
+  }, [user, firestore, categories, categoriesLoading]);
 
   const customSplit = form.watch("customSplit");
 
@@ -134,7 +142,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
     }
   }
 
-  if (usersLoading) {
+  if (usersLoading || categoriesLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -195,12 +203,12 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                     </FormControl>
                     <SelectContent>
                       {categories.map(cat => {
-                        const Icon = getCategoryIcon(cat);
+                        const Icon = getCategoryIcon(cat.name);
                         return (
-                          <SelectItem key={cat} value={cat}>
+                          <SelectItem key={cat.id} value={cat.name}>
                             <div className="flex items-center gap-2">
                               <Icon className="h-4 w-4" />
-                              <span>{cat}</span>
+                              <span>{cat.name}</span>
                             </div>
                           </SelectItem>
                         );

@@ -424,4 +424,16 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Chrome, Safari and Opera */
   }
+  
+  /* Fix react-day-picker table alignment */
+  .rdp-root .rdp-month_grid {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  
+  .rdp-root .rdp-weekday,
+  .rdp-root .rdp-day {
+    width: calc(100% / 7) !important;
+    text-align: center !important;
+  }
 }

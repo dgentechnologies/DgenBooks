@@ -22,7 +22,6 @@ export interface CalendarProps {
   selected?: Date
   onSelect?: (date: Date | undefined) => void
   className?: string
-  initialFocus?: boolean
   disabled?: (date: Date) => boolean
 }
 
@@ -106,7 +105,7 @@ function Calendar({
         ))}
 
         {/* Calendar days */}
-        {days.map((day, idx) => {
+        {days.map((day) => {
           const isCurrentMonth = isSameMonth(day, currentMonth)
           const isSelected = selected && isSameDay(day, selected)
           const isTodayDate = isToday(day)
@@ -114,7 +113,7 @@ function Calendar({
 
           return (
             <button
-              key={idx}
+              key={format(day, "yyyy-MM-dd")}
               type="button"
               onClick={() => handleDateClick(day)}
               disabled={isDisabled}

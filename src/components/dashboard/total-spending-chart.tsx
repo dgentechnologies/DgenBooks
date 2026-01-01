@@ -24,6 +24,14 @@ interface TotalSpendingChartProps {
 // Distinct color palette for 4 users
 const COLORS = ['#8B5CF6', '#10B981', '#F59E0B', '#EC4899'];
 
+// Type for chart data entry
+interface ChartDataEntry {
+  user: string;
+  fullName: string;
+  amount: number;
+  fill: string;
+}
+
 // Helper function to format name to proper case (Sentence Case)
 const formatName = (name: string): string => {
   return name
@@ -56,7 +64,7 @@ const chartConfig = {
 
 export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps) {
   const chartData = useMemo(() => {
-    const spendingByUser = users.map((user, index) => {
+    const spendingByUser: ChartDataEntry[] = users.map((user, index) => {
       const totalSpent = purchases
         .filter(p => p.paidById === user.id)
         .reduce((sum, p) => sum + p.amount, 0);
@@ -108,7 +116,7 @@ export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps
                 animationDuration={800}
                 animationBegin={0}
               >
-                {chartData.map((entry: { fill: string }, index: number) => (
+                {chartData.map((entry: ChartDataEntry, index: number) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Bar>

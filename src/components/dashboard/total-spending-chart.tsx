@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, Tooltip } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, Cell } from "recharts";
 import {
   Card,
   CardContent,
@@ -21,6 +21,40 @@ interface TotalSpendingChartProps {
   users: User[];
 }
 
+// Distinct color palette for 4 users
+const COLORS = ['#8B5CF6', '#10B981', '#F59E0B', '#EC4899'];
+
+// Type for chart data entry
+interface ChartDataEntry {
+  user: string;
+  fullName: string;
+  amount: number;
+  fill: string;
+}
+
+// Helper function to format name to proper case (Sentence Case)
+const formatName = (name: string): string => {
+  return name
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Helper function to shorten name for X-axis (FirstName LastInitial.)
+const shortenName = (name: string): string => {
+  const formattedName = formatName(name);
+  const parts = formattedName.split(' ');
+  
+  if (parts.length === 1) {
+    return parts[0];
+  }
+  
+  const firstName = parts[0];
+  const lastInitial = parts[parts.length - 1].charAt(0);
+  
+  return `${firstName} ${lastInitial}.`;
+};
+
 const chartConfig = {
   amount: {
     label: "Amount",
@@ -30,14 +64,15 @@ const chartConfig = {
 
 export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps) {
   const chartData = useMemo(() => {
-    const spendingByUser = users.map((user) => {
+    const spendingByUser: ChartDataEntry[] = users.map((user, index) => {
       const totalSpent = purchases
         .filter(p => p.paidById === user.id)
         .reduce((sum, p) => sum + p.amount, 0);
       return {
-        user: user.name,
+        user: shortenName(user.name), // Shortened name for X-axis
+        fullName: formatName(user.name), // Full formatted name for tooltip
         amount: totalSpent,
-        fill: "url(#purpleGradient)",
+        fill: COLORS[index % COLORS.length], // Assign unique color
       };
     });
     return spendingByUser;
@@ -55,12 +90,6 @@ export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps
         {hasData ? (
           <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] w-full">
             <BarChart accessibilityLayer data={chartData}>
-              <defs>
-                <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.6} />
-                </linearGradient>
-              </defs>
               <CartesianGrid 
                 vertical={false} 
                 strokeDasharray="3 3" 
@@ -72,22 +101,25 @@ export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                className="text-xs"
-                angle={-15}
-                textAnchor="end"
+                tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                angle={0}
+                textAnchor="middle"
                 height={60}
-                stroke="#94a3b8"
               />
               <Tooltip
                 cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }}
-                content={<ChartTooltipContent indicator="dot" />}
+                content={<ChartTooltipContent indicator="dot" nameKey="fullName" />}
               />
               <Bar
                 dataKey="amount"
                 radius={[8, 8, 0, 0]}
                 animationDuration={800}
                 animationBegin={0}
-              />
+              >
+                {chartData.map((entry: ChartDataEntry, index: number) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
             </BarChart>
           </ChartContainer>
         ) : (

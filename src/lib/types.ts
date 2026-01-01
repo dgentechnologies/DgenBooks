@@ -7,6 +7,14 @@ export type User = {
   lastTokenUpdate?: string; // ISO string of last token update
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  icon: string; // Lucide icon name
+  isDefault: boolean;
+  createdAt: string; // ISO string
+};
+
 export type Purchase = {
   id: string;
   type: 'purchase';

@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Handshake } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switcher1 } from "@/components/ui/switcher1";
 import { useState } from "react";
 import type { Debt } from "@/lib/types";
+import { formatName, formatCurrency } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,17 +31,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
   const [customAmount, setCustomAmount] = useState<string>(amount.toFixed(2));
   const [useCustomAmount, setUseCustomAmount] = useState(false);
 
-  const formattedAmount = new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-  }).format(amount);
-
-  // Format name to sentence case (capitalize first letter of each word)
-  const formatName = (name: string) => {
-    return name.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
+  const formattedAmount = formatCurrency(amount);
 
   const handleSettle = () => {
     if (useCustomAmount) {
@@ -114,14 +106,12 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
             </AlertDialogHeader>
             <div className="space-y-4 py-4">
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="useCustomAmount"
+                <Switcher1
                   checked={useCustomAmount}
-                  onChange={(e) => setUseCustomAmount(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
+                  onCheckedChange={setUseCustomAmount}
+                  aria-label="Use custom amount"
                 />
-                <Label htmlFor="useCustomAmount" className="text-sm font-medium cursor-pointer">
+                <Label className="text-sm font-medium cursor-pointer" onClick={() => setUseCustomAmount(!useCustomAmount)}>
                   Pay custom amount
                 </Label>
               </div>

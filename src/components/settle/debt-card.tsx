@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switcher1 } from "@/components/ui/switcher1";
 import { useState } from "react";
 import type { Debt } from "@/lib/types";
+import { formatName, formatCurrency } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,17 +31,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
   const [customAmount, setCustomAmount] = useState<string>(amount.toFixed(2));
   const [useCustomAmount, setUseCustomAmount] = useState(false);
 
-  const formattedAmount = new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-  }).format(amount);
-
-  // Format name to sentence case (capitalize first letter of each word)
-  const formatName = (name: string) => {
-    return name.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
+  const formattedAmount = formatCurrency(amount);
 
   const handleSettle = () => {
     if (useCustomAmount) {

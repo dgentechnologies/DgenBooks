@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/format";
 
 interface NetBalanceCardProps {
   balance: number;
@@ -9,10 +10,7 @@ interface NetBalanceCardProps {
 export function NetBalanceCard({ balance }: NetBalanceCardProps) {
   const isPositive = balance >= 0;
   const sign = isPositive ? "+" : "";
-  const formattedBalance = new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-  }).format(balance);
+  const formattedBalance = formatCurrency(balance);
 
   return (
     <Card className="relative overflow-hidden" role="region" aria-label="Net Balance Summary">

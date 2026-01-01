@@ -29,6 +29,7 @@ import { createPurchase, updatePurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { formatName } from "@/lib/format";
 
 const formSchema = z.object({
   itemName: z.string().min(1, { message: "Item name is required." }),
@@ -70,7 +71,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
       : {
           itemName: prefillData?.itemName || "",
           category: "",
-          amount: 0,
+          amount: "" as any, // Empty string so user doesn't have to delete "0"
           date: new Date(),
           paidById: user?.uid || "",
           customSplit: false,
@@ -265,7 +266,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}
+                    {users.map(user => <SelectItem key={user.id} value={user.id}>{formatName(user.name)}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -334,7 +335,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                               />
                             </FormControl>
                             <FormLabel className="font-normal cursor-pointer">
-                              {item.name}
+                              {formatName(item.name)}
                             </FormLabel>
                           </FormItem>
                         );

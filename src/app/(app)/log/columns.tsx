@@ -25,6 +25,7 @@ import { useFirestore, useUser } from "@/firebase"
 import { toast } from "@/lib/toast"
 import { useState } from "react"
 import { getCategoryIcon } from "@/lib/category-icons"
+import { formatName, formatCurrency } from "@/lib/format"
 
 // Action cell component for edit and delete
 function ActionCell({ transaction }: { transaction: Transaction }) {
@@ -176,10 +177,7 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     },
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue("amount"))
-      const formatted = new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-      }).format(amount)
+      const formatted = formatCurrency(amount)
  
       return <div className="text-right font-medium">{formatted}</div>
     },
@@ -196,7 +194,7 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
                 <AvatarImage src={user.avatar} />
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <span>{user.name}</span>
+            <span>{formatName(user.name)}</span>
         </div>
       )
     }
@@ -222,7 +220,7 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
                 <AvatarImage src={user.avatar} />
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <span>{user.name}</span>
+            <span>{formatName(user.name)}</span>
         </div>
         )
     }

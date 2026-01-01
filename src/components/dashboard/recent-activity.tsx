@@ -5,6 +5,7 @@ import type { Transaction, User } from "@/lib/types";
 import { ArrowRightLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { formatName, formatCurrency } from "@/lib/format";
 
 interface RecentActivityProps {
   transactions: Transaction[];
@@ -54,7 +55,7 @@ export function RecentActivity({ transactions, users }: RecentActivityProps) {
                           {transaction.itemName}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                          Paid by {getUser(users, transaction.paidById)?.name}
+                          Paid by {formatName(getUser(users, transaction.paidById)?.name || '')}
                         </p>
                       </>
                     ) : (
@@ -63,14 +64,14 @@ export function RecentActivity({ transactions, users }: RecentActivityProps) {
                           Settlement
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                          {getUser(users, transaction.fromId)?.name} → {getUser(users, transaction.toId)?.name}
+                          {formatName(getUser(users, transaction.fromId)?.name || '')} → {formatName(getUser(users, transaction.toId)?.name || '')}
                         </p>
                       </>
                     )}
                   </div>
                   <div className="text-right flex-shrink-0">
                      <div className="font-medium text-sm sm:text-base">
-                      ₹{transaction.amount.toLocaleString("en-IN")}
+                      {formatCurrency(transaction.amount)}
                     </div>
                      <div className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatDistanceToNow(date, { addSuffix: true })}

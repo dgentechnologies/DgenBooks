@@ -71,7 +71,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
       : {
           itemName: prefillData?.itemName || "",
           category: "",
-          amount: "" as any, // Empty string so user doesn't have to delete "0"
+          amount: undefined as any, // Undefined so input starts empty
           date: new Date(),
           paidById: user?.uid || "",
           customSplit: false,

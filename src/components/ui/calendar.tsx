@@ -35,12 +35,12 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1 mt-2",
-        head_row: "flex w-full",
+        head_row: "grid grid-cols-7 w-full",
         head_cell:
-          "text-slate-400 rounded-md font-semibold text-xs uppercase tracking-wider text-center flex-1 flex items-center justify-center",
-        row: "flex w-full mt-1",
+          "text-slate-400 rounded-md font-semibold text-xs uppercase tracking-wider text-center flex items-center justify-center",
+        row: "grid grid-cols-7 w-full mt-1",
         cell: cn(
-          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1 flex items-center justify-center",
+          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex items-center justify-center",
           "[&:has([aria-selected])]:bg-slate-800/40 [&:has([aria-selected])]:rounded-lg",
           "first:[&:has([aria-selected])]:rounded-l-lg last:[&:has([aria-selected])]:rounded-r-lg"
         ),

@@ -8,10 +8,11 @@ interface Switcher1Props {
   onCheckedChange: (checked: boolean) => void;
   disabled?: boolean;
   className?: string;
+  'aria-label'?: string;
 }
 
 export const Switcher1 = React.forwardRef<HTMLInputElement, Switcher1Props>(
-  ({ checked, onCheckedChange, disabled = false, className }, ref) => {
+  ({ checked, onCheckedChange, disabled = false, className, 'aria-label': ariaLabel }, ref) => {
     const handleChange = () => {
       if (!disabled) {
         onCheckedChange(!checked);
@@ -28,6 +29,7 @@ export const Switcher1 = React.forwardRef<HTMLInputElement, Switcher1Props>(
             onChange={handleChange}
             disabled={disabled}
             className='sr-only'
+            aria-label={ariaLabel}
           />
           {/* Track: Uses Brand Blue (primary) when active */}
           <div className={cn(

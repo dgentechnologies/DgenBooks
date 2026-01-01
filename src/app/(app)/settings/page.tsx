@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Switcher1 } from "@/components/ui/switcher1";
 import { AlertTriangle, LogOut, Settings as SettingsIcon, Bell, BellOff } from "lucide-react";
 import {
   AlertDialog,
@@ -138,11 +138,12 @@ export default function SettingsPage() {
                   </p>
                 )}
               </div>
-              <Switch
+              <Switcher1
                 checked={notificationsEnabled}
                 onCheckedChange={handleNotificationToggle}
                 disabled={!isSupported || isLoading}
                 className="ml-4"
+                aria-label="Toggle push notifications"
               />
             </div>
 

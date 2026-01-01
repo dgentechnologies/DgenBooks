@@ -198,7 +198,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-slate-950 p-0 text-sidebar-foreground [&>button]:hidden transition-transform duration-300 ease-in-out h-[100dvh] fixed inset-y-0 border-r-0 shadow-2xl z-50 rounded-tr-[30px] rounded-br-[30px]"
+            className="w-[--sidebar-width] bg-[#0B1121] p-0 text-sidebar-foreground [&>button]:hidden transition-transform duration-300 ease-in-out h-[100dvh] fixed inset-y-0 border-r-0 shadow-2xl z-50 rounded-tr-[30px] rounded-br-[30px]"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -248,7 +248,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-slate-800/50 backdrop-blur-md border border-white/5 group-data-[variant=floating]:rounded-3xl group-data-[variant=floating]:shadow-lg m-2 rounded-3xl"
+            className="flex h-full w-full flex-col bg-[#0B1121] border border-white/5 group-data-[variant=floating]:rounded-3xl group-data-[variant=floating]:shadow-lg m-2 rounded-3xl"
           >
             {children}
           </div>
@@ -512,7 +512,7 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-lg p-3 text-left text-sm outline-none ring-sidebar-ring transition-all duration-200 ease-in-out hover:text-slate-100 focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-gradient-to-r data-[active=true]:from-emerald-500/20 data-[active=true]:to-teal-500/10 data-[active=true]:font-semibold data-[active=true]:text-white data-[active=true]:border-l-4 data-[active=true]:border-emerald-500 data-[active=true]:shadow-[0_0_20px_rgba(16,185,129,0.15)] data-[active=false]:text-slate-400 data-[active=false]:hover:bg-slate-800/30 data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>span]:font-medium [&>span]:tracking-wide [&>svg]:size-5 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-lg p-3 text-left text-sm outline-none ring-sidebar-ring transition-all duration-200 ease-in-out hover:text-slate-100 focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-white/10 data-[active=true]:text-cyan-400 data-[active=false]:text-slate-400 data-[active=false]:hover:bg-slate-800/30 data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>span]:font-medium [&>span]:tracking-wide [&>svg]:size-5 [&>svg]:shrink-0",
   {
     variants: {
       variant: {

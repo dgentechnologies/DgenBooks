@@ -54,7 +54,12 @@ export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-lg leading-tight">{request.itemName}</h3>
+            <h3 className="font-semibold text-lg leading-tight">
+              {request.itemName}
+              {request.quantity && request.quantity > 1 && (
+                <span className="text-sm text-muted-foreground ml-2">(x{request.quantity})</span>
+              )}
+            </h3>
             <Badge 
               variant={request.priority === 'Urgent' ? 'destructive' : 'secondary'}
               className="shrink-0"

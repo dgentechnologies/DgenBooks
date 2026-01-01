@@ -26,6 +26,7 @@ const formSchema = z.object({
     required_error: "Please select a priority level.",
   }),
   estimatedCost: z.coerce.number().min(0).optional().or(z.literal('')),
+  quantity: z.coerce.number().min(1).optional().or(z.literal('')),
 });
 
 interface RequestItemFormProps {
@@ -43,6 +44,7 @@ export function RequestItemForm({ onSuccess }: RequestItemFormProps) {
       itemName: "",
       priority: "Standard",
       estimatedCost: undefined,
+      quantity: 1,
     },
   });
 
@@ -57,6 +59,7 @@ export function RequestItemForm({ onSuccess }: RequestItemFormProps) {
         priority: values.priority,
         status: 'Pending' as const,
         estimatedCost: values.estimatedCost ? Number(values.estimatedCost) : undefined,
+        quantity: values.quantity ? Number(values.quantity) : 1,
       };
 
       await createPurchaseRequest(firestore, user.uid, requestData);
@@ -137,6 +140,29 @@ export function RequestItemForm({ onSuccess }: RequestItemFormProps) {
                   </FormItem>
                 </RadioGroup>
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="quantity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quantity (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  placeholder="1" 
+                  {...field}
+                  value={field.value ?? ''}
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </FormControl>
+              <FormDescription className="text-xs">
+                Number of items needed (defaults to 1)
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -47,14 +47,16 @@ import type { Category } from "@/lib/types";
 const PROTECTED_CATEGORY = "Other";
 
 const AVAILABLE_ICONS = [
+  { name: "UtensilsCrossed", label: "Food" },
+  { name: "Plane", label: "Travel" },
   { name: "Cpu", label: "Electronics & PCBs" },
   { name: "Hammer", label: "Hardware & Materials" },
   { name: "Printer", label: "3D Printing" },
-  { name: "Wrench", label: "Tools & Equipment" },
   { name: "Building2", label: "Lab Operations" },
-  { name: "FileText", label: "Office Supplies" },
+  { name: "Wrench", label: "Tools & Equipment" },
   { name: "Code", label: "Software & Subscriptions" },
-  { name: "Truck", label: "Logistics & Travel" },
+  { name: "Truck", label: "Logistics" },
+  { name: "FileText", label: "Office Supplies" },
   { name: "PackageOpen", label: "Other" },
 ];
 

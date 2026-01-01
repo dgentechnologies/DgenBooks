@@ -2,96 +2,149 @@
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
-
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  format,
+  isSameMonth,
+  isSameDay,
+  addMonths,
+  subMonths,
+  isToday,
+} from "date-fns"
 import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export interface CalendarProps {
+  mode?: "single"
+  selected?: Date
+  onSelect?: (date: Date | undefined) => void
+  className?: string
+  initialFocus?: boolean
+  disabled?: (date: Date) => boolean
+}
 
 function Calendar({
+  mode = "single",
+  selected,
+  onSelect,
   className,
-  classNames,
-  showOutsideDays = true,
-  ...props
+  disabled,
 }: CalendarProps) {
+  const [currentMonth, setCurrentMonth] = React.useState<Date>(selected || new Date())
+
+  const monthStart = startOfMonth(currentMonth)
+  const monthEnd = endOfMonth(currentMonth)
+  const startDate = startOfWeek(monthStart)
+  const endDate = endOfWeek(monthEnd)
+
+  const days = eachDayOfInterval({ start: startDate, end: endDate })
+
+  const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+
+  const goToPreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1))
+  }
+
+  const handleDateClick = (day: Date) => {
+    if (disabled && disabled(day)) {
+      return
+    }
+    if (onSelect) {
+      onSelect(day)
+    }
+  }
+
   return (
-    <>
-      {/* Inline styles for react-day-picker table alignment fix.
-          This ensures immediate application even if globals.css hasn't loaded yet.
-          The same rules exist in globals.css as a fallback. */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .rdp-root .rdp-month_grid {
-          width: 100% !important;
-          table-layout: fixed !important;
-        }
+    <div
+      className={cn(
+        "p-4 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white border border-slate-700/50 rounded-xl shadow-2xl shadow-slate-950/50 w-full",
+        className
+      )}
+    >
+      {/* Header with navigation */}
+      <div className="flex justify-center items-center relative mb-4">
+        <button
+          type="button"
+          onClick={goToPreviousMonth}
+          className="absolute left-0 h-9 w-9 bg-slate-800/50 p-0 opacity-70 hover:opacity-100 hover:bg-slate-700/70 border border-slate-600/50 rounded-md transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 flex items-center justify-center"
+          aria-label="Go to previous month"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
         
-        .rdp-root .rdp-weekday,
-        .rdp-root .rdp-day {
-          width: calc(100% / 7) !important;
-          text-align: center !important;
-        }
-      `}} />
-      <DayPicker
-        showOutsideDays={showOutsideDays}
-        className={cn(
-          "p-4 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white border border-slate-700/50 rounded-xl shadow-2xl shadow-slate-950/50",
-          className
-        )}
-        classNames={{
-          months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-          month: "space-y-4 w-full",
-          caption: "flex justify-center pt-1 relative items-center mb-2",
-          caption_label: "text-base font-semibold text-white tracking-wide",
-          nav: "space-x-1 flex items-center",
-          nav_button: cn(
-            buttonVariants({ variant: "outline" }),
-            "h-9 w-9 bg-slate-800/50 p-0 opacity-70 hover:opacity-100 hover:bg-slate-700/70 border-slate-600/50 text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20"
-          ),
-          nav_button_previous: "absolute left-1",
-          nav_button_next: "absolute right-1",
-          table: "w-full border-collapse mt-2",
-          head_row: "",
-          head_cell:
-            "text-slate-400 rounded-md font-semibold text-xs uppercase tracking-wider text-center p-0",
-          row: "",
-          cell: cn(
-            "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
-            "[&:has([aria-selected])]:bg-slate-800/40 [&:has([aria-selected])]:rounded-lg",
-            "first:[&:has([aria-selected])]:rounded-l-lg last:[&:has([aria-selected])]:rounded-r-lg"
-          ),
-          day: cn(
-            buttonVariants({ variant: "ghost" }),
-            "h-10 w-10 p-0 font-medium text-slate-200 hover:bg-slate-700/50 hover:text-white rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-md aria-selected:opacity-100"
-          ),
-          day_range_end: "day-range-end",
-          day_selected:
-            "bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 focus:from-blue-600 focus:to-blue-700 shadow-lg shadow-blue-500/30 font-semibold scale-105",
-          day_today: "bg-slate-800/60 text-blue-400 font-bold border-2 border-blue-500/50 shadow-lg shadow-blue-500/20",
-          day_outside:
-            "day-outside text-slate-600 opacity-50 hover:opacity-70 aria-selected:bg-slate-800/30 aria-selected:text-slate-500",
-          day_disabled: "text-slate-700 opacity-40 cursor-not-allowed hover:bg-transparent",
-          day_range_middle:
-            "aria-selected:bg-slate-800/40 aria-selected:text-slate-200 rounded-none",
-          day_hidden: "invisible",
-          ...classNames,
-        }}
-        components={{
-          Chevron: ({ orientation, ...props }: { 
-            orientation?: 'left' | 'right' | 'up' | 'down'; 
-            className?: string;
-            size?: number;
-            disabled?: boolean;
-          }) => {
-            const Icon = orientation === 'left' ? ChevronLeft : ChevronRight;
-            return <Icon className={cn("h-5 w-5 transition-transform")} {...props} />;
-          },
-        }}
-        {...props}
-      />
-    </>
+        <h2 className="text-base font-semibold text-white tracking-wide">
+          {format(currentMonth, "MMMM yyyy")}
+        </h2>
+        
+        <button
+          type="button"
+          onClick={goToNextMonth}
+          className="absolute right-0 h-9 w-9 bg-slate-800/50 p-0 opacity-70 hover:opacity-100 hover:bg-slate-700/70 border border-slate-600/50 rounded-md transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 flex items-center justify-center"
+          aria-label="Go to next month"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Single grid for headers and days */}
+      <div className="grid grid-cols-7 gap-1 w-full text-center">
+        {/* Weekday headers */}
+        {weekDays.map((day) => (
+          <div
+            key={day}
+            className="text-slate-400 text-sm font-medium py-2"
+          >
+            {day}
+          </div>
+        ))}
+
+        {/* Calendar days */}
+        {days.map((day, idx) => {
+          const isCurrentMonth = isSameMonth(day, currentMonth)
+          const isSelected = selected && isSameDay(day, selected)
+          const isTodayDate = isToday(day)
+          const isDisabled = disabled && disabled(day)
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleDateClick(day)}
+              disabled={isDisabled}
+              className={cn(
+                "h-10 w-10 p-0 font-medium rounded-lg transition-all duration-200 flex items-center justify-center",
+                // Base styles
+                isCurrentMonth
+                  ? "text-slate-200 hover:bg-slate-700/50 hover:text-white hover:scale-105 hover:shadow-md"
+                  : "text-slate-600 opacity-50 hover:opacity-70",
+                // Selected state
+                isSelected &&
+                  "bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 font-semibold scale-105",
+                // Today state
+                !isSelected &&
+                  isTodayDate &&
+                  "bg-slate-800/60 text-blue-400 font-bold border-2 border-blue-500/50 shadow-lg shadow-blue-500/20",
+                // Disabled state
+                isDisabled &&
+                  "text-slate-700 opacity-40 cursor-not-allowed hover:bg-transparent hover:scale-100"
+              )}
+            >
+              {format(day, "d")}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
+
 Calendar.displayName = "Calendar"
 
 export { Calendar }

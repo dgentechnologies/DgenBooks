@@ -17,6 +17,9 @@ function Calendar({
 }: CalendarProps) {
   return (
     <>
+      {/* Inline styles for react-day-picker table alignment fix.
+          This ensures immediate application even if globals.css hasn't loaded yet.
+          The same rules exist in globals.css as a fallback. */}
       <style dangerouslySetInnerHTML={{__html: `
         .rdp-root .rdp-month_grid {
           width: 100% !important;

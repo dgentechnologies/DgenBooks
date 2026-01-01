@@ -120,7 +120,7 @@ export function DebtCard({ debt, onSettle }: DebtCardProps) {
                   onCheckedChange={setUseCustomAmount}
                   aria-label="Use custom amount"
                 />
-                <Label htmlFor="useCustomAmount" className="text-sm font-medium cursor-pointer">
+                <Label className="text-sm font-medium cursor-pointer" onClick={() => setUseCustomAmount(!useCustomAmount)}>
                   Pay custom amount
                 </Label>
               </div>

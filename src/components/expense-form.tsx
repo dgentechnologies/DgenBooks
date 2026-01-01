@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
+import { Switcher1 } from "@/components/ui/switcher1";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -286,7 +286,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                 </FormDescription>
               </div>
               <FormControl>
-                <Switch
+                <Switcher1
                   checked={field.value}
                   onCheckedChange={field.onChange}
                 />

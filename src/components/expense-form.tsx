@@ -26,7 +26,6 @@ import { useUsers } from "@/hooks/use-users";
 import { useCategories } from "@/hooks/use-categories";
 import { useUser, useFirestore } from "@/firebase";
 import { createPurchase, updatePurchase } from "@/lib/db";
-import { initializeDefaultCategories } from "@/lib/db/categories";
 import type { Purchase } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { getCategoryIcon } from "@/lib/category-icons";
@@ -85,13 +84,6 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
       form.setValue('splitWith', users.map((u) => u.id));
     }
   }, [users, expense, form]);
-
-  // Initialize categories if none exist
-  useEffect(() => {
-    if (user && firestore && categories.length === 0 && !categoriesLoading) {
-      initializeDefaultCategories(firestore, user.uid);
-    }
-  }, [user, firestore, categories, categoriesLoading]);
 
   const customSplit = form.watch("customSplit");
 

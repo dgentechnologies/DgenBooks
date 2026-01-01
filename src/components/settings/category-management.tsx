@@ -44,6 +44,8 @@ import { getCategoryIcon, getIconByName } from "@/lib/category-icons";
 import { toast } from "@/lib/toast";
 import type { Category } from "@/lib/types";
 
+const PROTECTED_CATEGORY = "Other";
+
 const AVAILABLE_ICONS = [
   { name: "Cpu", label: "Electronics & PCBs" },
   { name: "Hammer", label: "Hardware & Materials" },
@@ -153,8 +155,8 @@ export function CategoryManagement() {
   };
 
   const openDeleteDialog = async (category: Category) => {
-    if (category.name === "Other") {
-      toast.error("Error", "Cannot delete the 'Other' category");
+    if (category.name === PROTECTED_CATEGORY) {
+      toast.error("Error", `Cannot delete the '${PROTECTED_CATEGORY}' category`);
       return;
     }
     setSelectedCategory(category);
@@ -224,7 +226,7 @@ export function CategoryManagement() {
                         size="icon"
                         onClick={() => openDeleteDialog(category)}
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        disabled={category.name === "Other"}
+                        disabled={category.name === PROTECTED_CATEGORY}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

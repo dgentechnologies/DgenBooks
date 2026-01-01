@@ -39,10 +39,20 @@ export async function getCategories(firestore: Firestore, userId: string): Promi
     categories.push(doc.data() as Category);
   });
   
-  // If no categories exist, initialize defaults
+  // If no categories exist, initialize defaults and return them directly
   if (categories.length === 0) {
-    await initializeDefaultCategories(firestore, userId);
-    return getCategories(firestore, userId);
+    const defaultCategories: Category[] = [];
+    for (const category of DEFAULT_CATEGORIES) {
+      const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const newCategory: Category = {
+        ...category,
+        id: categoryId,
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(doc(categoriesRef, categoryId), newCategory);
+      defaultCategories.push(newCategory);
+    }
+    return defaultCategories.sort((a, b) => a.name.localeCompare(b.name));
   }
   
   return categories.sort((a, b) => a.name.localeCompare(b.name));
@@ -54,8 +64,14 @@ export async function createCategory(
   userId: string, 
   category: Omit<Category, 'id' | 'createdAt'>
 ): Promise<string> {
-  const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);
+  let categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  
+  // Check if ID already exists, append timestamp if needed
+  const existingDoc = await getDoc(doc(categoriesRef, categoryId));
+  if (existingDoc.exists()) {
+    categoryId = `${categoryId}-${Date.now()}`;
+  }
   
   const newCategory: Category = {
     ...category,

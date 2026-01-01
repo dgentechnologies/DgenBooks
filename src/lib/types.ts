@@ -50,6 +50,7 @@ export type PurchaseRequest = {
   priority: 'Urgent' | 'Standard';
   status: 'Pending' | 'Purchased';
   estimatedCost?: number;
+  quantity?: number; // Optional quantity field, defaults to 1
   createdAt: string; // ISO string
   updatedAt?: string; // ISO string, optional
 };

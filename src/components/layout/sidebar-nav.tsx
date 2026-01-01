@@ -13,19 +13,19 @@ import {
 } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
 import {
-  Home,
-  ReceiptText,
-  Handshake,
+  LayoutGrid,
+  Receipt,
+  Banknote,
   Settings,
   CircleUser,
   ShoppingCart,
 } from "lucide-react";
 
 const menuItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/log", label: "Expense Log", icon: ReceiptText },
+  { href: "/", label: "Dashboard", icon: LayoutGrid },
+  { href: "/log", label: "Expense Log", icon: Receipt },
   { href: "/requests", label: "Purchase List", icon: ShoppingCart },
-  { href: "/settle", label: "Settle Up", icon: Handshake },
+  { href: "/settle", label: "Settle Up", icon: Banknote },
 ];
 
 export function SidebarNav() {

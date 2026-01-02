@@ -18,7 +18,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useUser, useFirestore } from "@/firebase";
-import { createPurchaseRequest } from "@/lib/db";
+import { createPurchaseRequest, updatePurchaseRequest } from "@/lib/db";
+import type { PurchaseRequest } from "@/lib/types";
 
 const formSchema = z.object({
   itemName: z.string().min(1, { message: "Item name is required." }),
@@ -31,21 +32,29 @@ const formSchema = z.object({
 
 interface RequestItemFormProps {
   onSuccess?: () => void;
+  request?: PurchaseRequest;
 }
 
-export function RequestItemForm({ onSuccess }: RequestItemFormProps) {
+export function RequestItemForm({ onSuccess, request }: RequestItemFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      itemName: "",
-      priority: "Standard",
-      estimatedCost: undefined,
-      quantity: 1,
-    },
+    defaultValues: request
+      ? {
+          itemName: request.itemName,
+          priority: request.priority,
+          estimatedCost: request.estimatedCost,
+          quantity: request.quantity || 1,
+        }
+      : {
+          itemName: "",
+          priority: "Standard",
+          estimatedCost: undefined,
+          quantity: 1,
+        },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -53,24 +62,38 @@ export function RequestItemForm({ onSuccess }: RequestItemFormProps) {
     
     setIsLoading(true);
     try {
-      const requestData = {
-        itemName: values.itemName,
-        requestedBy: user.uid,
-        priority: values.priority,
-        status: 'Pending' as const,
-        estimatedCost: values.estimatedCost ? Number(values.estimatedCost) : undefined,
-        quantity: values.quantity ? Number(values.quantity) : 1,
-      };
+      if (request) {
+        // Update existing request
+        await updatePurchaseRequest(firestore, user.uid, request.id, {
+          itemName: values.itemName,
+          priority: values.priority,
+          estimatedCost: values.estimatedCost ? Number(values.estimatedCost) : undefined,
+          quantity: values.quantity ? Number(values.quantity) : 1,
+        });
+      } else {
+        // Create new request
+        const requestData = {
+          itemName: values.itemName,
+          requestedBy: user.uid,
+          priority: values.priority,
+          status: 'Pending' as const,
+          estimatedCost: values.estimatedCost ? Number(values.estimatedCost) : undefined,
+          quantity: values.quantity ? Number(values.quantity) : 1,
+        };
 
-      await createPurchaseRequest(firestore, user.uid, requestData);
+        await createPurchaseRequest(firestore, user.uid, requestData);
+      }
       
       if (onSuccess) {
         onSuccess();
       }
       
-      form.reset();
+      // Reset form only if not editing
+      if (!request) {
+        form.reset();
+      }
     } catch (error) {
-      console.error('Error creating purchase request:', error);
+      console.error('Error saving purchase request:', error);
     } finally {
       setIsLoading(false);
     }
@@ -199,10 +222,10 @@ export function RequestItemForm({ onSuccess }: RequestItemFormProps) {
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span>Submitting...</span>
+              <span>{request ? "Updating..." : "Submitting..."}</span>
             </>
           ) : (
-            <span>Add Request</span>
+            <span>{request ? "Save Changes" : "Add Request"}</span>
           )}
         </Button>
       </form>

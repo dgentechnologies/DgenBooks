@@ -47,8 +47,8 @@ export function PurchaseRequestCard({ request, users }: PurchaseRequestCardProps
   const handleExpenseSuccess = async () => {
     // Delete the purchase request after it has been purchased and added to expenses
     try {
-      // Note: Any authenticated user can delete a purchase request per Firestore rules
-      await deletePurchaseRequest(firestore, '', request.id);
+      // Any authenticated user can delete a purchase request after marking it as purchased
+      await deletePurchaseRequest(firestore, user?.uid || '', request.id);
       
       setIsExpenseDialogOpen(false);
       toast.success("Item Purchased", `${request.itemName} has been marked as purchased and added to expenses.`);

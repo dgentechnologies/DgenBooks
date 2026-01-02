@@ -47,7 +47,7 @@ export function RequestItemForm({ onSuccess, request }: RequestItemFormProps) {
           itemName: request.itemName,
           priority: request.priority,
           estimatedCost: request.estimatedCost,
-          quantity: request.quantity || 1,
+          quantity: request.quantity ?? 1,
         }
       : {
           itemName: "",

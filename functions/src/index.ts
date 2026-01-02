@@ -143,11 +143,12 @@ export const onPurchaseRequestCreated = functions.firestore
           .filter(userId => userId !== request.requestedBy);
 
         const notificationPromises = usersToNotify.map((userId: string) => {
+          const costText = request.estimatedCost ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
           return sendNotificationToUser(
             userId,
             {
               title: '🚨 Urgent Purchase Request',
-              body: `${requesterName} needs ${request.itemName} urgently${request.estimatedCost ? ` (~$${request.estimatedCost.toFixed(2)})` : ''}`,
+              body: `${requesterName} needs ${request.itemName} urgently${costText}`,
             },
             {
               type: 'urgent_request',

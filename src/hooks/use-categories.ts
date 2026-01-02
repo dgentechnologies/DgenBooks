@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import type { Category } from '@/lib/types';
@@ -10,6 +10,7 @@ export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const initializingRef = useRef(false);
   
   const firestore = useFirestore();
   const { user } = useUser();
@@ -24,22 +25,27 @@ export function useCategories() {
     
     const unsubscribe = onSnapshot(
       categoriesRef,
-      async (snapshot) => {
+      (snapshot) => {
         const categoriesData: Category[] = [];
         snapshot.forEach((doc) => {
           categoriesData.push(doc.data() as Category);
         });
         
-        // If no categories exist, initialize default categories
-        if (categoriesData.length === 0) {
-          try {
-            await initializeDefaultCategories(firestore, user.uid);
-            // The snapshot listener will pick up the new categories automatically
-          } catch (err) {
-            console.error('Error initializing default categories:', err);
-            setError(err as Error);
-          }
-        } else {
+        // If no categories exist and we're not already initializing, initialize default categories
+        if (categoriesData.length === 0 && !initializingRef.current) {
+          initializingRef.current = true;
+          initializeDefaultCategories(firestore, user.uid)
+            .then(() => {
+              // The snapshot listener will pick up the new categories automatically
+              initializingRef.current = false;
+            })
+            .catch((err) => {
+              console.error('Error initializing default categories:', err);
+              setError(err as Error);
+              setCategories([]);
+              initializingRef.current = false;
+            });
+        } else if (categoriesData.length > 0) {
           // Sort categories alphabetically
           categoriesData.sort((a, b) => a.name.localeCompare(b.name));
           setCategories(categoriesData);
@@ -50,6 +56,7 @@ export function useCategories() {
       (err) => {
         console.error('Error fetching categories:', err);
         setError(err as Error);
+        setCategories([]);
         setIsLoading(false);
       }
     );

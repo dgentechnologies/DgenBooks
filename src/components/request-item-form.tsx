@@ -64,7 +64,7 @@ export function RequestItemForm({ onSuccess, request }: RequestItemFormProps) {
     try {
       if (request) {
         // Update existing request - only include optional fields if they have values
-        const updates: any = {
+        const updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedBy' | 'createdAt'>> = {
           itemName: values.itemName,
           priority: values.priority,
           quantity: values.quantity ? Number(values.quantity) : 1,
@@ -78,7 +78,13 @@ export function RequestItemForm({ onSuccess, request }: RequestItemFormProps) {
         await updatePurchaseRequest(firestore, user.uid, request.id, updates);
       } else {
         // Create new request - only include optional fields if they have values
-        const requestData: any = {
+        const requestData: Partial<Omit<PurchaseRequest, 'id' | 'createdAt'>> & {
+          itemName: string;
+          requestedBy: string;
+          priority: 'Urgent' | 'Standard';
+          status: 'Pending';
+          quantity: number;
+        } = {
           itemName: values.itemName,
           requestedBy: user.uid,
           priority: values.priority,

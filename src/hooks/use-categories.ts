@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import type { Category } from '@/lib/types';
+import { initializeDefaultCategories } from '@/lib/db/categories';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -23,16 +24,27 @@ export function useCategories() {
     
     const unsubscribe = onSnapshot(
       categoriesRef,
-      (snapshot) => {
+      async (snapshot) => {
         const categoriesData: Category[] = [];
         snapshot.forEach((doc) => {
           categoriesData.push(doc.data() as Category);
         });
         
-        // Sort categories alphabetically
-        categoriesData.sort((a, b) => a.name.localeCompare(b.name));
+        // If no categories exist, initialize default categories
+        if (categoriesData.length === 0) {
+          try {
+            await initializeDefaultCategories(firestore, user.uid);
+            // The snapshot listener will pick up the new categories automatically
+          } catch (err) {
+            console.error('Error initializing default categories:', err);
+            setError(err as Error);
+          }
+        } else {
+          // Sort categories alphabetically
+          categoriesData.sort((a, b) => a.name.localeCompare(b.name));
+          setCategories(categoriesData);
+        }
         
-        setCategories(categoriesData);
         setIsLoading(false);
       },
       (err) => {

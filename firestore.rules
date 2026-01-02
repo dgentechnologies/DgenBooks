@@ -173,5 +173,14 @@ service cloud.firestore {
       allow update: if isUpdatingValidPurchaseRequest();
       allow delete: if isSignedIn();
     }
+
+    /**
+     * @description Rules for user-specific category subcollections.
+     * @path /users/{userId}/categories/{categoryId}
+     * @allow (read/write) Only the owner can read and write their own categories.
+     */
+    match /users/{userId}/categories/{categoryId} {
+      allow read, write: if isOwner(userId);
+    }
   }
 }

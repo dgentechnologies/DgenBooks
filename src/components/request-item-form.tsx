@@ -63,23 +63,33 @@ export function RequestItemForm({ onSuccess, request }: RequestItemFormProps) {
     setIsLoading(true);
     try {
       if (request) {
-        // Update existing request
-        await updatePurchaseRequest(firestore, user.uid, request.id, {
+        // Update existing request - only include optional fields if they have values
+        const updates: any = {
           itemName: values.itemName,
           priority: values.priority,
-          estimatedCost: values.estimatedCost ? Number(values.estimatedCost) : undefined,
           quantity: values.quantity ? Number(values.quantity) : 1,
-        });
+        };
+
+        // Only add estimatedCost if it has a value
+        if (values.estimatedCost && Number(values.estimatedCost) > 0) {
+          updates.estimatedCost = Number(values.estimatedCost);
+        }
+
+        await updatePurchaseRequest(firestore, user.uid, request.id, updates);
       } else {
-        // Create new request
-        const requestData = {
+        // Create new request - only include optional fields if they have values
+        const requestData: any = {
           itemName: values.itemName,
           requestedBy: user.uid,
           priority: values.priority,
           status: 'Pending' as const,
-          estimatedCost: values.estimatedCost ? Number(values.estimatedCost) : undefined,
           quantity: values.quantity ? Number(values.quantity) : 1,
         };
+
+        // Only add estimatedCost if it has a value
+        if (values.estimatedCost && Number(values.estimatedCost) > 0) {
+          requestData.estimatedCost = Number(values.estimatedCost);
+        }
 
         await createPurchaseRequest(firestore, user.uid, requestData);
       }

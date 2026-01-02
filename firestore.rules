@@ -162,22 +162,16 @@ service cloud.firestore {
      * @path /purchaseRequests/{requestId}
      * @allow (read) All authenticated users can read purchase requests for team collaboration.
      * @allow (create) Authenticated users can create purchase requests.
-     * @allow (update) Only the request creator can update their request, but any authenticated
-     *                 user can mark a request as 'Purchased' (status update only).
-     * @allow (delete) Only the request creator can delete their request.
+     * @allow (update) Only the request creator can update their request.
+     * @allow (delete) Any authenticated user can delete a purchase request (e.g., when marking as purchased)
+     *                 OR only the request creator can delete their own request.
      */
     match /purchaseRequests/{requestId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isCreatingValidPurchaseRequest();
-      allow update: if isSignedIn() && (
-        // Original creator can update their request
-        isUpdatingValidPurchaseRequest()
-        // OR any authenticated user can mark as purchased (status field only)
-        || (request.resource.data.keys().hasOnly(['status', 'updatedAt'])
-            && request.resource.data.status == 'Purchased')
-      );
-      allow delete: if isSignedIn() && resource.data.requestedBy == request.auth.uid;
+      allow update: if isUpdatingValidPurchaseRequest();
+      allow delete: if isSignedIn();
     }
   }
 }

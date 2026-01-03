@@ -251,8 +251,8 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                     onOpenAutoFocus={(e) => e.preventDefault()}
                     onInteractOutside={(e) => {
                       // Check if the interaction is actually inside the calendar
-                      const target = e.target as HTMLElement;
-                      if (calendarRef.current && calendarRef.current.contains(target)) {
+                      const target = e.target;
+                      if (target && target instanceof Node && calendarRef.current?.contains(target)) {
                         // Click is inside calendar, prevent closing
                         e.preventDefault();
                       }

@@ -224,10 +224,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                 <FormLabel>Date</FormLabel>
                 <Popover 
                   open={isCalendarOpen} 
-                  onOpenChange={(open) => {
-                    // Allow opening and manual closing
-                    setIsCalendarOpen(open);
-                  }}
+                  onOpenChange={setIsCalendarOpen}
                 >
                   <PopoverTrigger asChild>
                     <FormControl>

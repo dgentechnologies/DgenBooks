@@ -222,7 +222,10 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Date</FormLabel>
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <Popover 
+                  open={isCalendarOpen} 
+                  onOpenChange={setIsCalendarOpen}
+                >
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -244,12 +247,9 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                   <PopoverContent 
                     className="w-auto p-0" 
                     align="start"
-                    onPointerDownOutside={(e) => {
-                      // Don't close when clicking calendar buttons - they handle their own events
-                      const target = e.target as HTMLElement;
-                      if (target.closest('button') && target.closest('.bg-gradient-to-br')) {
-                        e.preventDefault();
-                      }
+                    onPointerDown={(e) => {
+                      // Prevent the popover from closing when interacting with calendar
+                      e.stopPropagation();
                     }}
                   >
                     <Calendar

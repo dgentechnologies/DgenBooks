@@ -54,6 +54,7 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { users, isLoading: usersLoading } = useUsers();
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { user } = useUser();
@@ -221,7 +222,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Date</FormLabel>
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -244,7 +245,10 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        field.onChange(date);
+                        setIsCalendarOpen(false);
+                      }}
                     />
                   </PopoverContent>
                 </Popover>

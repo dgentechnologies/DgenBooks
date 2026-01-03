@@ -241,7 +241,17 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent 
+                    className="w-auto p-0" 
+                    align="start"
+                    onPointerDownOutside={(e) => {
+                      // Don't close when clicking calendar buttons - they handle their own events
+                      const target = e.target as HTMLElement;
+                      if (target.closest('button') && target.closest('.bg-gradient-to-br')) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
                     <Calendar
                       mode="single"
                       selected={field.value}

@@ -31,10 +31,10 @@ export const Switcher1 = React.forwardRef<HTMLInputElement, Switcher1Props>(
             className='sr-only'
             aria-label={ariaLabel}
           />
-          {/* Track: Uses Brand Blue (primary) when active */}
+          {/* Track: Uses Brand Blue (primary) when active, dark theme color when inactive */}
           <div className={cn(
             'block h-8 w-14 rounded-full transition-colors duration-300',
-            checked ? 'bg-primary' : 'bg-[#E5E7EB]'
+            checked ? 'bg-primary' : 'bg-slate-700/70 border border-slate-600/50'
           )}></div>
           
           {/* Thumb: Slides when active */}

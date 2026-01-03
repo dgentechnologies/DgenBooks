@@ -43,21 +43,27 @@ function Calendar({
 
   const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
-  const goToPreviousMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1))
-  }
-
-  const goToNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1))
-  }
-
-  const handleDateClick = (day: Date) => {
+  const handleDateClick = (e: React.MouseEvent, day: Date) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (disabled && disabled(day)) {
       return
     }
     if (onSelect) {
       onSelect(day)
     }
+  }
+
+  const handlePreviousMonth = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCurrentMonth(subMonths(currentMonth, 1))
+  }
+
+  const handleNextMonth = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCurrentMonth(addMonths(currentMonth, 1))
   }
 
   return (
@@ -71,7 +77,7 @@ function Calendar({
       <div className="flex justify-center items-center relative mb-4">
         <button
           type="button"
-          onClick={goToPreviousMonth}
+          onClick={handlePreviousMonth}
           className="absolute left-0 h-9 w-9 bg-slate-800/50 p-0 opacity-70 hover:opacity-100 hover:bg-slate-700/70 border border-slate-600/50 rounded-md transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 flex items-center justify-center"
           aria-label="Go to previous month"
         >
@@ -84,7 +90,7 @@ function Calendar({
         
         <button
           type="button"
-          onClick={goToNextMonth}
+          onClick={handleNextMonth}
           className="absolute right-0 h-9 w-9 bg-slate-800/50 p-0 opacity-70 hover:opacity-100 hover:bg-slate-700/70 border border-slate-600/50 rounded-md transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 flex items-center justify-center"
           aria-label="Go to next month"
         >
@@ -115,7 +121,7 @@ function Calendar({
             <button
               key={format(day, "yyyy-MM-dd")}
               type="button"
-              onClick={() => handleDateClick(day)}
+              onClick={(e) => handleDateClick(e, day)}
               disabled={isDisabled}
               className={cn(
                 "h-10 w-10 p-0 font-medium rounded-lg transition-all duration-200 flex items-center justify-center",

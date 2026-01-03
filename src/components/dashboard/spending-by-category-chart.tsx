@@ -64,7 +64,7 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
       </CardHeader>
       <CardContent className="flex-1 pb-0 flex items-center justify-center">
         {chartData.length > 0 ? (
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="h-[280px] sm:h-[300px] w-full">
             <PieChart>
               <Tooltip
                 cursor={false}
@@ -75,9 +75,9 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
+                cy="45%"
+                innerRadius={55}
+                outerRadius={85}
                 strokeWidth={4}
                 stroke="rgba(15, 23, 42, 0.9)"
                 animationDuration={800}
@@ -92,11 +92,11 @@ export function SpendingByCategoryChart({ purchases }: SpendingByCategoryChartPr
                 ))}
               </Pie>
               <Legend 
-                verticalAlign="middle" 
-                align="right"
-                layout="vertical"
+                verticalAlign="bottom" 
+                align="center"
+                layout="horizontal"
                 iconType="circle"
-                wrapperStyle={{ paddingLeft: '20px' }}
+                wrapperStyle={{ paddingTop: '15px' }}
               />
             </PieChart>
           </ChartContainer>

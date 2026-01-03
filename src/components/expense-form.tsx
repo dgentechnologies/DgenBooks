@@ -27,7 +27,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useUser, useFirestore } from "@/firebase";
 import { createPurchase, updatePurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatName } from "@/lib/format";
 
@@ -55,6 +55,7 @@ interface ExpenseFormProps {
 export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const { users, isLoading: usersLoading } = useUsers();
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { user } = useUser();
@@ -248,8 +249,17 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                     className="w-auto p-0" 
                     align="start"
                     onOpenAutoFocus={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => {
+                      // Check if the interaction is actually inside the calendar
+                      const target = e.target as HTMLElement;
+                      if (calendarRef.current && calendarRef.current.contains(target)) {
+                        // Click is inside calendar, prevent closing
+                        e.preventDefault();
+                      }
+                      // Otherwise allow default behavior (close)
+                    }}
                   >
-                    <div onPointerDownCapture={(e) => e.stopPropagation()}>
+                    <div ref={calendarRef}>
                       <Calendar
                         mode="single"
                         selected={field.value}

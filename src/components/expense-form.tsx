@@ -247,8 +247,9 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                   <PopoverContent 
                     className="w-auto p-0" 
                     align="start"
-                    onPointerDown={(e) => {
-                      // Prevent the popover from closing when interacting with calendar
+                    onMouseDown={(e) => {
+                      // Prevent mouse events inside the calendar from closing the popover
+                      // This allows navigation arrows and date buttons to work properly
                       e.stopPropagation();
                     }}
                   >

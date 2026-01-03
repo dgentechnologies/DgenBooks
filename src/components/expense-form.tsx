@@ -224,7 +224,10 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                 <FormLabel>Date</FormLabel>
                 <Popover 
                   open={isCalendarOpen} 
-                  onOpenChange={setIsCalendarOpen}
+                  onOpenChange={(open) => {
+                    // Allow opening and manual closing
+                    setIsCalendarOpen(open);
+                  }}
                 >
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -247,20 +250,18 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                   <PopoverContent 
                     className="w-auto p-0" 
                     align="start"
-                    onMouseDown={(e) => {
-                      // Prevent mouse events inside the calendar from closing the popover
-                      // This allows navigation arrows and date buttons to work properly
-                      e.stopPropagation();
-                    }}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
                   >
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={(date) => {
-                        field.onChange(date);
-                        setIsCalendarOpen(false);
-                      }}
-                    />
+                    <div onPointerDownCapture={(e) => e.stopPropagation()}>
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setIsCalendarOpen(false);
+                        }}
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 <FormMessage />

@@ -5,9 +5,11 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  getDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import type { Settlement } from '@/lib/types';
+import { notifyUsers } from '@/lib/notifications';
 
 /**
  * Create a new settlement in the shared settlements collection
@@ -24,6 +26,29 @@ export async function createSettlement(
     createdAt: serverTimestamp(),
   });
   
+  // Send notification to the recipient
+  try {
+    if (settlementData.fromId && settlementData.toId) {
+      // Get payer name
+      const payerDoc = await getDoc(doc(firestore, 'users', settlementData.fromId));
+      const payerName = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+      
+      // Notify the recipient
+      notifyUsers(firestore, [settlementData.toId], {
+        title: '✅ Payment Received',
+        body: `${payerName} settled up $${settlementData.amount.toFixed(2)} with you`,
+        data: {
+          type: 'settlement',
+          url: '/settle',
+          itemId: docRef.id,
+        },
+      }).catch(err => console.error('Failed to send notification:', err));
+    }
+  } catch (error) {
+    console.error('Error sending settlement notification:', error);
+    // Don't fail the settlement creation if notification fails
+  }
+  
   return docRef.id;
 }
 
@@ -38,10 +63,45 @@ export async function updateSettlement(
 ): Promise<void> {
   try {
     const settlementRef = doc(firestore, `settlements/${settlementId}`);
+    
+    // Get current settlement data for notifications
+    const currentSettlementSnap = await getDoc(settlementRef);
+    const beforeData = currentSettlementSnap.exists() ? currentSettlementSnap.data() : null;
+    
     await updateDoc(settlementRef, {
       ...updates,
       updatedAt: serverTimestamp(),
     });
+    
+    // Send notifications
+    if (beforeData && beforeData.fromId && beforeData.toId) {
+      // Type guard to ensure fromId and toId exist from beforeData
+      const fromId = beforeData.fromId;
+      const toId = beforeData.toId;
+      
+      // Get payer name
+      const payerDoc = await getDoc(doc(firestore, 'users', fromId));
+      const payerName = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+      
+      // Build change description
+      const afterAmount = updates.amount !== undefined ? updates.amount : beforeData.amount;
+      let changeDescription = '';
+      if (beforeData.amount !== afterAmount && typeof afterAmount === 'number' && typeof beforeData.amount === 'number') {
+        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterAmount.toFixed(2)})`;
+      } else {
+        changeDescription = ' (details updated)';
+      }
+      
+      notifyUsers(firestore, [toId], {
+        title: '✏️ Settlement Updated',
+        body: `${payerName} updated a settlement with you${changeDescription}`,
+        data: {
+          type: 'settlement_updated',
+          url: '/settle',
+          itemId: settlementId,
+        },
+      }).catch(err => console.error('Failed to send notification:', err));
+    }
   } catch (error: any) {
     // Check for Firebase permission denied error
     if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
@@ -62,7 +122,31 @@ export async function deleteSettlement(
 ): Promise<void> {
   try {
     const settlementRef = doc(firestore, `settlements/${settlementId}`);
+    
+    // Get settlement data before deletion for notifications
+    const settlementSnap = await getDoc(settlementRef);
+    const settlementData = settlementSnap.exists() ? settlementSnap.data() : null;
+    
     await deleteDoc(settlementRef);
+    
+    // Send notifications
+    if (settlementData && settlementData.fromId && settlementData.toId) {
+      // Get payer name
+      const payerDoc = await getDoc(doc(firestore, 'users', settlementData.fromId));
+      const payerName = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+      
+      const amount = typeof settlementData.amount === 'number' ? settlementData.amount.toFixed(2) : '0.00';
+      
+      notifyUsers(firestore, [settlementData.toId], {
+        title: '🗑️ Settlement Deleted',
+        body: `${payerName} removed a settlement of $${amount}`,
+        data: {
+          type: 'settlement_deleted',
+          url: '/settle',
+          itemId: settlementId,
+        },
+      }).catch(err => console.error('Failed to send notification:', err));
+    }
   } catch (error: any) {
     // Check for Firebase permission denied error
     if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {

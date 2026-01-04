@@ -10,10 +10,26 @@
 
 ---
 
+## 🎉 Push Notifications - 100% FREE with Vercel
+
+Push notifications now work on **Vercel's free tier** - no Firebase Blaze plan needed!
+
+**Quick Setup (3 steps):**
+1. Get Firebase service account key
+2. Add to Vercel environment variables
+3. Deploy!
+
+See **[VERCEL-NOTIFICATIONS-SETUP.md](VERCEL-NOTIFICATIONS-SETUP.md)** for complete instructions.
+
+**Alternative:** For Firebase Cloud Functions approach, see **[FIX-NOTIFICATIONS-NOW.md](FIX-NOTIFICATIONS-NOW.md)**.
+
+---
+
 DgenBooks is a feature-rich, responsive, and secure expense tracking application designed for teams and individuals who demand efficiency and elegance. Built with Next.js, TypeScript, and Firebase, it offers a premium user experience with real-time data synchronization.
 
 ## ✨ Features
 
+- 🔔 **Push Notifications**: Get real-time notifications for all expense and settlement changes (requires deployment - see above)
 - 📊 **Interactive Dashboard**: Get a real-time overview of your finances with beautiful, interactive charts for spending patterns.
 - 💸 **Real-time Balance Tracking**: Instantly see who owes who, with balances that update live as expenses are added or settled.
 - 🤝 **Seamless Expense Splitting**: Easily split expenses among team members. Split with everyone or select specific people.

@@ -249,7 +249,6 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                           field.onChange(date);
                         }
                       }}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>

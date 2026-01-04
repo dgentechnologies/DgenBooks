@@ -217,6 +217,12 @@ export const onPurchaseUpdated = functions.firestore
     console.log('Purchase updated:', purchaseId);
 
     try {
+      // Validate required fields
+      if (!afterData.paidById) {
+        console.warn(`Purchase ${purchaseId} missing paidById, skipping notification`);
+        return;
+      }
+
       // Get the user who updated
       const updaterDoc = await admin.firestore().collection('users').doc(afterData.paidById).get();
       const updaterName = updaterDoc.exists ? updaterDoc.data()?.name || 'Someone' : 'Someone';
@@ -224,9 +230,14 @@ export const onPurchaseUpdated = functions.firestore
       // Get all users who are split with (excluding the updater)
       const usersToNotify = (afterData.splitWith || []).filter((userId: string) => userId !== afterData.paidById);
 
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase ${purchaseId}`);
+        return;
+      }
+
       // Build a description of what changed
       let changeDescription = '';
-      if (beforeData.amount !== afterData.amount) {
+      if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
         changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
       } else if (beforeData.itemName !== afterData.itemName) {
         changeDescription = ` (item name changed)`;
@@ -240,7 +251,7 @@ export const onPurchaseUpdated = functions.firestore
           userId,
           {
             title: '✏️ Expense Updated',
-            body: `${updaterName} updated expense: ${afterData.itemName}${changeDescription}`,
+            body: `${updaterName} updated expense: ${afterData.itemName || 'an expense'}${changeDescription}`,
           },
           {
             type: 'expense_updated',
@@ -270,6 +281,12 @@ export const onPurchaseDeleted = functions.firestore
     console.log('Purchase deleted:', purchaseId);
 
     try {
+      // Validate required fields
+      if (!purchase.paidById) {
+        console.warn(`Purchase ${purchaseId} missing paidById, skipping notification`);
+        return;
+      }
+
       // Get the user who paid (and likely deleted)
       const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
       const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';
@@ -277,13 +294,20 @@ export const onPurchaseDeleted = functions.firestore
       // Get all users who were split with (excluding the deleter)
       const usersToNotify = (purchase.splitWith || []).filter((userId: string) => userId !== purchase.paidById);
 
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase ${purchaseId}`);
+        return;
+      }
+
+      const amount = typeof purchase.amount === 'number' ? purchase.amount.toFixed(2) : '0.00';
+
       // Send notification to each user
       const notificationPromises = usersToNotify.map((userId: string) => {
         return sendNotificationToUser(
           userId,
           {
             title: '🗑️ Expense Deleted',
-            body: `${deleterName} deleted expense: ${purchase.itemName} ($${purchase.amount.toFixed(2)})`,
+            body: `${deleterName} deleted expense: ${purchase.itemName || 'an expense'} ($${amount})`,
           },
           {
             type: 'expense_deleted',
@@ -314,13 +338,19 @@ export const onSettlementUpdated = functions.firestore
     console.log('Settlement updated:', settlementId);
 
     try {
+      // Validate required fields
+      if (!afterData.fromId || !afterData.toId) {
+        console.warn(`Settlement ${settlementId} missing fromId or toId, skipping notification`);
+        return;
+      }
+
       // Get the user who paid
       const payerDoc = await admin.firestore().collection('users').doc(afterData.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
       // Build a description of what changed
       let changeDescription = '';
-      if (beforeData.amount !== afterData.amount) {
+      if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
         changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
       } else {
         changeDescription = ' (details updated)';
@@ -359,16 +389,24 @@ export const onSettlementDeleted = functions.firestore
     console.log('Settlement deleted:', settlementId);
 
     try {
+      // Validate required fields
+      if (!settlement.fromId || !settlement.toId) {
+        console.warn(`Settlement ${settlementId} missing fromId or toId, skipping notification`);
+        return;
+      }
+
       // Get the user who paid (and likely deleted)
       const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
+
+      const amount = typeof settlement.amount === 'number' ? settlement.amount.toFixed(2) : '0.00';
 
       // Notify the user who was supposed to receive the payment
       await sendNotificationToUser(
         settlement.toId,
         {
           title: '🗑️ Settlement Deleted',
-          body: `${payerName} removed a settlement of $${settlement.amount.toFixed(2)}`,
+          body: `${payerName} removed a settlement of $${amount}`,
         },
         {
           type: 'settlement_deleted',

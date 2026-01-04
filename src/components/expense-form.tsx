@@ -27,7 +27,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useUser, useFirestore } from "@/firebase";
 import { createPurchase, updatePurchase } from "@/lib/db";
 import type { Purchase } from "@/lib/types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatName } from "@/lib/format";
 
@@ -54,8 +54,6 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const calendarRef = useRef<HTMLDivElement>(null);
   const { users, isLoading: usersLoading } = useUsers();
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { user } = useUser();
@@ -223,10 +221,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Date</FormLabel>
-                <Popover 
-                  open={isCalendarOpen} 
-                  onOpenChange={setIsCalendarOpen}
-                >
+                <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
@@ -245,30 +240,17 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto p-0" 
-                    align="start"
-                    onOpenAutoFocus={(e) => e.preventDefault()}
-                    onInteractOutside={(e) => {
-                      // Check if the interaction is actually inside the calendar
-                      const target = e.target;
-                      if (target && target instanceof Node && calendarRef.current?.contains(target)) {
-                        // Click is inside calendar, prevent closing
-                        e.preventDefault();
-                      }
-                      // Otherwise allow default behavior (close)
-                    }}
-                  >
-                    <div ref={calendarRef}>
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={(date) => {
+                  <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={(date) => {
+                        if (date) {
                           field.onChange(date);
-                          setIsCalendarOpen(false);
-                        }}
-                      />
-                    </div>
+                        }
+                      }}
+                      initialFocus
+                    />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />

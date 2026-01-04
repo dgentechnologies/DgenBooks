@@ -241,15 +241,17 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={(date) => {
-                        if (date) {
-                          field.onChange(date);
-                        }
-                      }}
-                    />
+                    <div className="pointer-events-auto">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date);
+                          }
+                        }}
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 <FormMessage />

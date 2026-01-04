@@ -3,6 +3,7 @@ import {
   collection, 
   addDoc, 
   doc,
+  updateDoc,
   deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
@@ -27,12 +28,36 @@ export async function createSettlement(
 }
 
 /**
+ * Update an existing settlement
+ * Only the user who paid can update their settlement
+ */
+export async function updateSettlement(
+  firestore: Firestore,
+  settlementId: string,
+  updates: Partial<Omit<Settlement, 'id' | 'type' | 'fromId'>>
+): Promise<void> {
+  try {
+    const settlementRef = doc(firestore, `settlements/${settlementId}`);
+    await updateDoc(settlementRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error: any) {
+    // Check for Firebase permission denied error
+    if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
+      throw new Error('PERMISSION_DENIED: You can only modify your own settlements.');
+    }
+    // Re-throw other errors
+    throw error;
+  }
+}
+
+/**
  * Delete a settlement
  * Only the user who paid can delete their settlement
  */
 export async function deleteSettlement(
   firestore: Firestore,
-  userId: string,
   settlementId: string
 ): Promise<void> {
   try {

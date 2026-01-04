@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import type { Transaction, User, Purchase } from "@/lib/types"
+import type { Transaction, User, Purchase, Settlement } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUpDown, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ExpenseForm } from "@/components/expense-form"
+import { SettlementForm } from "@/components/settlement-form"
 import { deletePurchase } from "@/lib/db/purchases"
 import { deleteSettlement } from "@/lib/db/settlements"
 import { useFirestore, useUser } from "@/firebase"
@@ -34,6 +35,17 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
   const firestore = useFirestore();
   const { user } = useUser();
 
+  // Check if the current user owns this transaction
+  const isOwner = user && (
+    (transaction.type === 'purchase' && transaction.paidById === user.uid) ||
+    (transaction.type === 'settlement' && transaction.fromId === user.uid)
+  );
+
+  // Don't show actions if user doesn't own the transaction
+  if (!isOwner) {
+    return null;
+  }
+
   const handleDelete = async () => {
     if (!user) return;
     setIsDeleting(true);
@@ -42,7 +54,7 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
         await deletePurchase(firestore, user.uid, transaction.id);
         toast.success("Expense Deleted", "The expense has been successfully deleted.");
       } else {
-        await deleteSettlement(firestore, user.uid, transaction.id);
+        await deleteSettlement(firestore, transaction.id);
         toast.success("Settlement Deleted", "The settlement has been successfully deleted.");
       }
     } catch (error: any) {
@@ -61,27 +73,35 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
 
   const handleEditSuccess = () => {
     setIsEditOpen(false);
-    toast.success("Expense Updated", "The expense has been successfully updated.");
+    const message = transaction.type === 'purchase' ? "Expense Updated" : "Settlement Updated";
+    const description = transaction.type === 'purchase' 
+      ? "The expense has been successfully updated." 
+      : "The settlement has been successfully updated.";
+    toast.success(message, description);
   };
 
   return (
     <div className="flex items-center gap-2">
-      {transaction.type === 'purchase' && (
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Pencil className="h-4 w-4" />
-              <span className="sr-only">Edit expense</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-[425px] sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-xl">Edit Expense</DialogTitle>
-            </DialogHeader>
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Edit {transaction.type === 'purchase' ? 'expense' : 'settlement'}</span>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="w-[95vw] max-w-[425px] sm:max-w-md lg:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl">
+              {transaction.type === 'purchase' ? 'Edit Expense' : 'Edit Settlement'}
+            </DialogTitle>
+          </DialogHeader>
+          {transaction.type === 'purchase' ? (
             <ExpenseForm expense={transaction as Purchase} onSuccess={handleEditSuccess} />
-          </DialogContent>
-        </Dialog>
-      )}
+          ) : (
+            <SettlementForm settlement={transaction as Settlement} onSuccess={handleEditSuccess} />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>

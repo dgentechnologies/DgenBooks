@@ -25,6 +25,7 @@ import { createSettlement, updateSettlement } from "@/lib/db/settlements";
 import type { Settlement } from "@/lib/types";
 import { useState } from "react";
 import { formatName } from "@/lib/format";
+import { toast } from "@/lib/toast";
 
 const formSchema = z.object({
   amount: z.coerce.number().min(0.01, { message: "Amount must be greater than 0." }),
@@ -54,7 +55,7 @@ export function SettlementForm({ onSuccess, settlement }: SettlementFormProps) {
           amount: settlement.amount,
         }
       : {
-          amount: undefined as any,
+          amount: 0,
           date: new Date(),
           fromId: user?.uid || "",
           toId: "",
@@ -73,7 +74,7 @@ export function SettlementForm({ onSuccess, settlement }: SettlementFormProps) {
           amount: values.amount,
           date: values.date.toISOString(),
         };
-        await updateSettlement(firestore, user.uid, settlement.id, updates);
+        await updateSettlement(firestore, settlement.id, updates);
       } else {
         // Create new settlement
         const settlementData: Omit<Settlement, 'id'> = {
@@ -93,8 +94,15 @@ export function SettlementForm({ onSuccess, settlement }: SettlementFormProps) {
       if (!settlement) {
         form.reset();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving settlement:', error);
+      
+      // Show error toast to user
+      if (error?.message?.includes('PERMISSION_DENIED')) {
+        toast.error("Action Denied", "You can only modify your own settlements.");
+      } else {
+        toast.error("Error", `Failed to ${settlement ? 'update' : 'create'} settlement. Please try again.`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +146,7 @@ export function SettlementForm({ onSuccess, settlement }: SettlementFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>From</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!settlement}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={settlement != null}>
                   <FormControl>
                     <SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
                       <SelectValue placeholder="Who paid?" />

@@ -33,7 +33,6 @@ export async function createSettlement(
  */
 export async function updateSettlement(
   firestore: Firestore,
-  userId: string,
   settlementId: string,
   updates: Partial<Omit<Settlement, 'id' | 'type' | 'fromId'>>
 ): Promise<void> {
@@ -59,7 +58,6 @@ export async function updateSettlement(
  */
 export async function deleteSettlement(
   firestore: Firestore,
-  userId: string,
   settlementId: string
 ): Promise<void> {
   try {

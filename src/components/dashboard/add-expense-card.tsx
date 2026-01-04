@@ -18,12 +18,12 @@ export function AddExpenseCard() {
   return (
     <>
       <Card 
-        className="border-dashed border-2 border-slate-600 cursor-pointer transition-all hover:brightness-110 bg-transparent" 
+        className="border-dashed border-2 border-slate-600 cursor-pointer transition-all hover:brightness-110 bg-transparent h-full" 
         role="button" 
         aria-label="Add New Expense"
         onClick={() => setIsFormOpen(true)}
       >
-        <CardContent className="flex flex-col items-center justify-center min-h-[200px] p-8">
+        <CardContent className="flex flex-col items-center justify-center h-full p-8">
           <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4 hover:bg-slate-700 transition-colors">
             <Plus className="h-8 w-8 text-slate-300" aria-hidden="true" />
           </div>

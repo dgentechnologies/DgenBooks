@@ -287,11 +287,11 @@ export const onPurchaseDeleted = functions.firestore
         return;
       }
 
-      // Get the user who paid (and likely deleted)
+      // Get the user who paid for this expense
       const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
       const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';
 
-      // Get all users who were split with (excluding the deleter)
+      // Get all users who were split with (excluding the payer)
       const usersToNotify = (purchase.splitWith || []).filter((userId: string) => userId !== purchase.paidById);
 
       if (usersToNotify.length === 0) {
@@ -395,7 +395,7 @@ export const onSettlementDeleted = functions.firestore
         return;
       }
 
-      // Get the user who paid (and likely deleted)
+      // Get the user who made the payment
       const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 

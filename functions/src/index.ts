@@ -202,3 +202,183 @@ export const onSettlementCreated = functions.firestore
       console.error('Error processing settlement notification:', error);
     }
   });
+
+/**
+ * Cloud Function: Triggered when an expense (purchase) is updated
+ * Notifies all team members except the one who updated it
+ */
+export const onPurchaseUpdated = functions.firestore
+  .document('purchases/{purchaseId}')
+  .onUpdate(async (change, context) => {
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+    const purchaseId = context.params.purchaseId;
+
+    console.log('Purchase updated:', purchaseId);
+
+    try {
+      // Get the user who updated
+      const updaterDoc = await admin.firestore().collection('users').doc(afterData.paidById).get();
+      const updaterName = updaterDoc.exists ? updaterDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Get all users who are split with (excluding the updater)
+      const usersToNotify = (afterData.splitWith || []).filter((userId: string) => userId !== afterData.paidById);
+
+      // Build a description of what changed
+      let changeDescription = '';
+      if (beforeData.amount !== afterData.amount) {
+        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+      } else if (beforeData.itemName !== afterData.itemName) {
+        changeDescription = ` (item name changed)`;
+      } else {
+        changeDescription = ' (details updated)';
+      }
+
+      // Send notification to each user
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: '✏️ Expense Updated',
+            body: `${updaterName} updated expense: ${afterData.itemName}${changeDescription}`,
+          },
+          {
+            type: 'expense_updated',
+            url: '/log',
+            itemId: purchaseId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent update notifications for purchase ${purchaseId}`);
+    } catch (error) {
+      console.error('Error processing purchase update notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when an expense (purchase) is deleted
+ * Notifies all team members who were involved except the one who deleted it
+ */
+export const onPurchaseDeleted = functions.firestore
+  .document('purchases/{purchaseId}')
+  .onDelete(async (snapshot, context) => {
+    const purchase = snapshot.data();
+    const purchaseId = context.params.purchaseId;
+
+    console.log('Purchase deleted:', purchaseId);
+
+    try {
+      // Get the user who paid (and likely deleted)
+      const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+      const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Get all users who were split with (excluding the deleter)
+      const usersToNotify = (purchase.splitWith || []).filter((userId: string) => userId !== purchase.paidById);
+
+      // Send notification to each user
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: '🗑️ Expense Deleted',
+            body: `${deleterName} deleted expense: ${purchase.itemName} ($${purchase.amount.toFixed(2)})`,
+          },
+          {
+            type: 'expense_deleted',
+            url: '/log',
+            itemId: purchaseId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent delete notifications for purchase ${purchaseId}`);
+    } catch (error) {
+      console.error('Error processing purchase delete notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when a settlement is updated
+ * Notifies both parties involved
+ */
+export const onSettlementUpdated = functions.firestore
+  .document('settlements/{settlementId}')
+  .onUpdate(async (change, context) => {
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+    const settlementId = context.params.settlementId;
+
+    console.log('Settlement updated:', settlementId);
+
+    try {
+      // Get the user who paid
+      const payerDoc = await admin.firestore().collection('users').doc(afterData.fromId).get();
+      const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Build a description of what changed
+      let changeDescription = '';
+      if (beforeData.amount !== afterData.amount) {
+        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+      } else {
+        changeDescription = ' (details updated)';
+      }
+
+      // Notify the receiver (toId)
+      await sendNotificationToUser(
+        afterData.toId,
+        {
+          title: '✏️ Settlement Updated',
+          body: `${payerName} updated a settlement with you${changeDescription}`,
+        },
+        {
+          type: 'settlement_updated',
+          url: '/settle',
+          itemId: settlementId,
+        }
+      );
+
+      console.log(`Sent settlement update notification for ${settlementId}`);
+    } catch (error) {
+      console.error('Error processing settlement update notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when a settlement is deleted
+ * Notifies the user who was supposed to receive the payment
+ */
+export const onSettlementDeleted = functions.firestore
+  .document('settlements/{settlementId}')
+  .onDelete(async (snapshot, context) => {
+    const settlement = snapshot.data();
+    const settlementId = context.params.settlementId;
+
+    console.log('Settlement deleted:', settlementId);
+
+    try {
+      // Get the user who paid (and likely deleted)
+      const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
+      const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Notify the user who was supposed to receive the payment
+      await sendNotificationToUser(
+        settlement.toId,
+        {
+          title: '🗑️ Settlement Deleted',
+          body: `${payerName} removed a settlement of $${settlement.amount.toFixed(2)}`,
+        },
+        {
+          type: 'settlement_deleted',
+          url: '/settle',
+          itemId: settlementId,
+        }
+      );
+
+      console.log(`Sent settlement delete notification for ${settlementId}`);
+    } catch (error) {
+      console.error('Error processing settlement delete notification:', error);
+    }
+  });

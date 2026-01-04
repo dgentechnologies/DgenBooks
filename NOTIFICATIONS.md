@@ -122,16 +122,40 @@ service cloud.firestore {
 - **Message**: "{Name} paid ${amount} for {item}"
 - **Action**: Clicking opens the expense log
 
-#### 2. Urgent Purchase Request
+#### 2. Expense Updated
+- **Trigger**: When a team member updates an existing expense
+- **Recipients**: All users in the expense split (except updater)
+- **Message**: "{Name} updated expense: {item} (amount changed from ${old} to ${new})"
+- **Action**: Clicking opens the expense log
+
+#### 3. Expense Deleted
+- **Trigger**: When a team member deletes an expense
+- **Recipients**: All users who were in the expense split (except deleter)
+- **Message**: "{Name} deleted expense: {item} (${amount})"
+- **Action**: Clicking opens the expense log
+
+#### 4. Urgent Purchase Request
 - **Trigger**: When a high-priority purchase request is created
 - **Recipients**: All team members (except requester)
 - **Message**: "{Name} needs {item} urgently (~${cost})"
 - **Action**: Clicking opens the requests page
 
-#### 3. Settlement Payment
+#### 5. Settlement Payment
 - **Trigger**: When someone settles a debt
 - **Recipients**: The user who receives the payment
 - **Message**: "{Name} settled up ${amount} with you"
+- **Action**: Clicking opens the settlement page
+
+#### 6. Settlement Updated
+- **Trigger**: When someone updates a settlement
+- **Recipients**: The user who is supposed to receive the payment
+- **Message**: "{Name} updated a settlement with you (amount changed from ${old} to ${new})"
+- **Action**: Clicking opens the settlement page
+
+#### 7. Settlement Deleted
+- **Trigger**: When someone deletes a settlement
+- **Recipients**: The user who was supposed to receive the payment
+- **Message**: "{Name} removed a settlement of ${amount}"
 - **Action**: Clicking opens the settlement page
 
 ## Technical Details

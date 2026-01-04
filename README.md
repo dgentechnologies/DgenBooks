@@ -10,10 +10,23 @@
 
 ---
 
+## 🚨 IMPORTANT: Push Notifications Setup Required
+
+**If notifications are not working**, you need to deploy the Cloud Functions:
+
+```bash
+./deploy-functions.sh
+```
+
+See **[FIX-NOTIFICATIONS-NOW.md](FIX-NOTIFICATIONS-NOW.md)** for complete instructions.
+
+---
+
 DgenBooks is a feature-rich, responsive, and secure expense tracking application designed for teams and individuals who demand efficiency and elegance. Built with Next.js, TypeScript, and Firebase, it offers a premium user experience with real-time data synchronization.
 
 ## ✨ Features
 
+- 🔔 **Push Notifications**: Get real-time notifications for all expense and settlement changes (requires deployment - see above)
 - 📊 **Interactive Dashboard**: Get a real-time overview of your finances with beautiful, interactive charts for spending patterns.
 - 💸 **Real-time Balance Tracking**: Instantly see who owes who, with balances that update live as expenses are added or settled.
 - 🤝 **Seamless Expense Splitting**: Easily split expenses among team members. Split with everyone or select specific people.

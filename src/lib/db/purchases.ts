@@ -5,9 +5,11 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  getDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import type { Purchase } from '@/lib/types';
+import { notifyUsers } from '@/lib/notifications';
 
 /**
  * Create a new purchase in the shared purchases collection
@@ -24,6 +26,33 @@ export async function createPurchase(
     createdAt: serverTimestamp(),
   });
   
+  // Send notifications to other users in the split (excluding the payer)
+  try {
+    const usersToNotify = (purchaseData.splitWith || []).filter(
+      (id: string) => id !== purchaseData.paidById
+    );
+    
+    if (usersToNotify.length > 0) {
+      // Get payer name
+      const payerDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
+      const payerName = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+      
+      // Send notification
+      notifyUsers(firestore, usersToNotify, {
+        title: '💳 New Expense Added',
+        body: `${payerName} paid $${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
+        data: {
+          type: 'expense',
+          url: '/log',
+          itemId: docRef.id,
+        },
+      }).catch(err => console.error('Failed to send notification:', err));
+    }
+  } catch (error) {
+    console.error('Error sending purchase notification:', error);
+    // Don't fail the purchase creation if notification fails
+  }
+  
   return docRef.id;
 }
 
@@ -39,10 +68,49 @@ export async function updatePurchase(
 ): Promise<void> {
   try {
     const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
+    
+    // Get current purchase data for notifications
+    const currentPurchaseSnap = await getDoc(purchaseRef);
+    const beforeData = currentPurchaseSnap.exists() ? currentPurchaseSnap.data() : null;
+    
     await updateDoc(purchaseRef, {
       ...updates,
       updatedAt: serverTimestamp(),
     });
+    
+    // Send notifications
+    if (beforeData) {
+      const afterData = { ...beforeData, ...updates };
+      const usersToNotify = (afterData.splitWith || []).filter(
+        (id: string) => id !== beforeData.paidById
+      );
+      
+      if (usersToNotify.length > 0) {
+        // Get updater name
+        const updaterDoc = await getDoc(doc(firestore, 'users', beforeData.paidById));
+        const updaterName = updaterDoc.exists() ? updaterDoc.data()?.name || 'Someone' : 'Someone';
+        
+        // Build change description
+        let changeDescription = '';
+        if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
+          changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+        } else if (beforeData.itemName !== afterData.itemName) {
+          changeDescription = ` (item name changed)`;
+        } else {
+          changeDescription = ' (details updated)';
+        }
+        
+        notifyUsers(firestore, usersToNotify, {
+          title: '✏️ Expense Updated',
+          body: `${updaterName} updated expense: ${afterData.itemName || 'an expense'}${changeDescription}`,
+          data: {
+            type: 'expense_updated',
+            url: '/log',
+            itemId: purchaseId,
+          },
+        }).catch(err => console.error('Failed to send notification:', err));
+      }
+    }
   } catch (error: any) {
     // Check for Firebase permission denied error
     if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {
@@ -64,7 +132,37 @@ export async function deletePurchase(
 ): Promise<void> {
   try {
     const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
+    
+    // Get purchase data before deletion for notifications
+    const purchaseSnap = await getDoc(purchaseRef);
+    const purchaseData = purchaseSnap.exists() ? purchaseSnap.data() : null;
+    
     await deleteDoc(purchaseRef);
+    
+    // Send notifications
+    if (purchaseData && purchaseData.paidById) {
+      const usersToNotify = (purchaseData.splitWith || []).filter(
+        (id: string) => id !== purchaseData.paidById
+      );
+      
+      if (usersToNotify.length > 0) {
+        // Get deleter name
+        const deleterDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
+        const deleterName = deleterDoc.exists() ? deleterDoc.data()?.name || 'Someone' : 'Someone';
+        
+        const amount = typeof purchaseData.amount === 'number' ? purchaseData.amount.toFixed(2) : '0.00';
+        
+        notifyUsers(firestore, usersToNotify, {
+          title: '🗑️ Expense Deleted',
+          body: `${deleterName} deleted expense: ${purchaseData.itemName || 'an expense'} ($${amount})`,
+          data: {
+            type: 'expense_deleted',
+            url: '/log',
+            itemId: purchaseId,
+          },
+        }).catch(err => console.error('Failed to send notification:', err));
+      }
+    }
   } catch (error: any) {
     // Check for Firebase permission denied error
     if (error?.code === 'permission-denied' || error?.code === 'PERMISSION_DENIED') {

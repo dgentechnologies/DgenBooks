@@ -10,15 +10,18 @@
 
 ---
 
-## 🚨 IMPORTANT: Push Notifications Setup Required
+## 🎉 Push Notifications - 100% FREE with Vercel
 
-**If notifications are not working**, you need to deploy the Cloud Functions:
+Push notifications now work on **Vercel's free tier** - no Firebase Blaze plan needed!
 
-```bash
-./deploy-functions.sh
-```
+**Quick Setup (3 steps):**
+1. Get Firebase service account key
+2. Add to Vercel environment variables
+3. Deploy!
 
-See **[FIX-NOTIFICATIONS-NOW.md](FIX-NOTIFICATIONS-NOW.md)** for complete instructions.
+See **[VERCEL-NOTIFICATIONS-SETUP.md](VERCEL-NOTIFICATIONS-SETUP.md)** for complete instructions.
+
+**Alternative:** For Firebase Cloud Functions approach, see **[FIX-NOTIFICATIONS-NOW.md](FIX-NOTIFICATIONS-NOW.md)**.
 
 ---
 

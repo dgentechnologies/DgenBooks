@@ -99,7 +99,7 @@ export async function sendNotification(params: {
     console.log(`✅ [sendNotification] Notification sent successfully: ${result.successCount} success, ${result.failureCount} failures`);
     
     if (result.failureCount > 0 && result.failedTokens?.length > 0) {
-      console.warn(`⚠️ [sendNotification] Failed tokens:`, result.failedTokens.map((t: string) => t.substring(0, 20) + '...'));
+      console.warn(`⚠️ [sendNotification] Failed tokens:`, result.failedTokens.map((t: string) => t ? t.substring(0, 20) + '...' : 'undefined'));
     }
     
     return true;

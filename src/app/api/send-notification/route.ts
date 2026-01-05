@@ -112,7 +112,8 @@ export async function POST(request: Request) {
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
           failedTokens.push(tokens[idx]);
-          console.error(`  ❌ Token ${idx} (${tokens[idx].substring(0, 20)}...):`, {
+          const tokenPreview = tokens[idx] ? tokens[idx].substring(0, 20) + '...' : 'undefined';
+          console.error(`  ❌ Token ${idx} (${tokenPreview}):`, {
             errorCode: resp.error?.code,
             errorMessage: resp.error?.message
           });

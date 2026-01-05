@@ -1,5 +1,9 @@
 # FREE Vercel-Based Push Notifications Setup
 
+## ✅ This is the ACTIVE Implementation
+
+**This is the current notification system being used.** Firebase Cloud Functions have been disabled to avoid Blaze plan costs. See `REMOVE_CLOUD_FUNCTIONS.md` if you need to delete previously deployed functions.
+
 ## Overview
 
 This implementation uses Vercel's free computing power to send push notifications instead of Firebase Cloud Functions (which requires paid Blaze plan). The notifications are triggered directly from the client-side code when expenses or settlements are created, updated, or deleted.
@@ -26,15 +30,33 @@ Push Notification to User Devices
 
 ### Key Differences from Cloud Functions
 
-**Cloud Functions (Paid Blaze Plan):**
+**Cloud Functions (Paid Blaze Plan - NOT USED):**
 - Notifications triggered automatically by Firestore changes
 - More reliable (server-side triggers)
 - Costs money after free tier
+- ❌ **Disabled in this project**
 
-**Vercel API Routes (100% Free):**
+**Vercel API Routes (100% Free - CURRENTLY USED):**
 - Notifications triggered manually from client code
 - Runs on Vercel's free tier
 - Dependent on client app being online when action occurs
+- ✅ **Active implementation**
+
+### What Uses Firestore (Free Tier)
+
+The following Firestore features are used and are FREE on the Spark plan:
+- ✅ **Storing FCM tokens** in user documents (necessary for notifications)
+- ✅ **Authentication** (Firebase Auth)
+- ✅ **Database** for expenses, settlements, users
+
+**Free Tier Limits (Spark Plan):**
+- 50,000 reads/day
+- 20,000 writes/day
+- 20,000 deletes/day
+- 1 GB storage
+- 10 GB/month network egress
+
+For typical expense tracking usage (small teams), these limits are more than sufficient. **You do NOT need to upgrade to Blaze plan** for this app to work.
 
 ## Setup Instructions
 
@@ -83,12 +105,12 @@ Or push to your GitHub repository and Vercel will auto-deploy.
 
 All users receive push notifications for:
 
-1. ✅ **Expense Created** - "John paid $50.00 for Groceries"
+1. ✅ **Expense Created** - "John paid ₹50.00 for Groceries"
 2. ✅ **Expense Updated** - "John updated expense: Groceries (amount changed)"
-3. ✅ **Expense Deleted** - "John deleted expense: Groceries ($50.00)"
-4. ✅ **Settlement Created** - "John settled up $25.00 with you"
+3. ✅ **Expense Deleted** - "John deleted expense: Groceries (₹50.00)"
+4. ✅ **Settlement Created** - "John settled up ₹25.00 with you"
 5. ✅ **Settlement Updated** - "John updated a settlement with you"
-6. ✅ **Settlement Deleted** - "John removed a settlement of $25.00"
+6. ✅ **Settlement Deleted** - "John removed a settlement of ₹25.00"
 
 ## Files Changed
 

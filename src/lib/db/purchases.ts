@@ -32,24 +32,39 @@ export async function createPurchase(
       (id: string) => id !== purchaseData.paidById
     );
     
+    console.log('🔔 [createPurchase] Expense created:', {
+      purchaseId: docRef.id,
+      paidById: purchaseData.paidById,
+      amount: purchaseData.amount,
+      itemName: purchaseData.itemName,
+      splitWith: purchaseData.splitWith,
+      usersToNotify: usersToNotify
+    });
+    
     if (usersToNotify.length > 0) {
       // Get payer name
       const payerDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
       const payerName = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
       
+      console.log(`📢 [createPurchase] Notifying ${usersToNotify.length} user(s) about new expense by ${payerName}`);
+      
       // Send notification
       notifyUsers(firestore, usersToNotify, {
         title: '💳 New Expense Added',
-        body: `${payerName} paid $${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
+        body: `${payerName} paid ₹${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
         data: {
           type: 'expense',
           url: '/log',
           itemId: docRef.id,
         },
-      }).catch(err => console.error('Failed to send notification:', err));
+      }).catch(err => {
+        console.error('❌ [createPurchase] Failed to send notification:', err);
+      });
+    } else {
+      console.log('ℹ️ [createPurchase] No users to notify (no other users in split or only payer)');
     }
   } catch (error) {
-    console.error('Error sending purchase notification:', error);
+    console.error('❌ [createPurchase] Error sending purchase notification:', error);
     // Don't fail the purchase creation if notification fails
   }
   
@@ -85,6 +100,15 @@ export async function updatePurchase(
         (id: string) => id !== beforeData.paidById
       );
       
+      console.log('🔔 [updatePurchase] Expense updated:', {
+        purchaseId: purchaseId,
+        paidById: beforeData.paidById,
+        beforeAmount: beforeData.amount,
+        afterAmount: afterData.amount,
+        itemName: afterData.itemName,
+        usersToNotify: usersToNotify
+      });
+      
       if (usersToNotify.length > 0) {
         // Get updater name
         const updaterDoc = await getDoc(doc(firestore, 'users', beforeData.paidById));
@@ -93,12 +117,14 @@ export async function updatePurchase(
         // Build change description
         let changeDescription = '';
         if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
-          changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+          changeDescription = ` (amount changed from ₹${beforeData.amount.toFixed(2)} to ₹${afterData.amount.toFixed(2)})`;
         } else if (beforeData.itemName !== afterData.itemName) {
           changeDescription = ` (item name changed)`;
         } else {
           changeDescription = ' (details updated)';
         }
+        
+        console.log(`📢 [updatePurchase] Notifying ${usersToNotify.length} user(s) about expense update by ${updaterName}`);
         
         notifyUsers(firestore, usersToNotify, {
           title: '✏️ Expense Updated',
@@ -108,7 +134,11 @@ export async function updatePurchase(
             url: '/log',
             itemId: purchaseId,
           },
-        }).catch(err => console.error('Failed to send notification:', err));
+        }).catch(err => {
+          console.error('❌ [updatePurchase] Failed to send notification:', err);
+        });
+      } else {
+        console.log('ℹ️ [updatePurchase] No users to notify');
       }
     }
   } catch (error: any) {
@@ -145,6 +175,14 @@ export async function deletePurchase(
         (id: string) => id !== purchaseData.paidById
       );
       
+      console.log('🔔 [deletePurchase] Expense deleted:', {
+        purchaseId: purchaseId,
+        paidById: purchaseData.paidById,
+        amount: purchaseData.amount,
+        itemName: purchaseData.itemName,
+        usersToNotify: usersToNotify
+      });
+      
       if (usersToNotify.length > 0) {
         // Get deleter name
         const deleterDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
@@ -152,15 +190,21 @@ export async function deletePurchase(
         
         const amount = typeof purchaseData.amount === 'number' ? purchaseData.amount.toFixed(2) : '0.00';
         
+        console.log(`📢 [deletePurchase] Notifying ${usersToNotify.length} user(s) about expense deletion by ${deleterName}`);
+        
         notifyUsers(firestore, usersToNotify, {
           title: '🗑️ Expense Deleted',
-          body: `${deleterName} deleted expense: ${purchaseData.itemName || 'an expense'} ($${amount})`,
+          body: `${deleterName} deleted expense: ${purchaseData.itemName || 'an expense'} (₹${amount})`,
           data: {
             type: 'expense_deleted',
             url: '/log',
             itemId: purchaseId,
           },
-        }).catch(err => console.error('Failed to send notification:', err));
+        }).catch(err => {
+          console.error('❌ [deletePurchase] Failed to send notification:', err);
+        });
+      } else {
+        console.log('ℹ️ [deletePurchase] No users to notify');
       }
     }
   } catch (error: any) {

@@ -1,5 +1,9 @@
 # FREE Vercel-Based Push Notifications Setup
 
+## ✅ This is the ACTIVE Implementation
+
+**This is the current notification system being used.** Firebase Cloud Functions have been disabled to avoid Blaze plan costs. See `REMOVE_CLOUD_FUNCTIONS.md` if you need to delete previously deployed functions.
+
 ## Overview
 
 This implementation uses Vercel's free computing power to send push notifications instead of Firebase Cloud Functions (which requires paid Blaze plan). The notifications are triggered directly from the client-side code when expenses or settlements are created, updated, or deleted.
@@ -26,15 +30,26 @@ Push Notification to User Devices
 
 ### Key Differences from Cloud Functions
 
-**Cloud Functions (Paid Blaze Plan):**
+**Cloud Functions (Paid Blaze Plan - NOT USED):**
 - Notifications triggered automatically by Firestore changes
 - More reliable (server-side triggers)
 - Costs money after free tier
+- ❌ **Disabled in this project**
 
-**Vercel API Routes (100% Free):**
+**Vercel API Routes (100% Free - CURRENTLY USED):**
 - Notifications triggered manually from client code
 - Runs on Vercel's free tier
 - Dependent on client app being online when action occurs
+- ✅ **Active implementation**
+
+### What Uses Firestore (Free Tier)
+
+The following Firestore features are used and are FREE:
+- ✅ **Storing FCM tokens** in user documents (necessary for notifications)
+- ✅ **Authentication** (Firebase Auth)
+- ✅ **Database** for expenses, settlements, users (within free limits)
+
+These are covered by Firebase Spark (free) plan. **You do NOT need to upgrade to Blaze plan.**
 
 ## Setup Instructions
 

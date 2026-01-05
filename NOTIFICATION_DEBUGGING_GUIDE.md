@@ -104,7 +104,7 @@ All logs use emoji prefixes for easy filtering:
 📤 [sendNotification] Preparing to send notification: {
   tokensCount: 3,
   title: "💳 New Expense Added",
-  bodyPreview: "John paid $50.00 for Groceries",
+  bodyPreview: "John paid ₹50.00 for Groceries",
   dataKeys: ["type", "url", "itemId"]
 }
 🌐 [sendNotification] Making POST request to /api/send-notification...
@@ -129,7 +129,7 @@ All logs use emoji prefixes for easy filtering:
 📋 [NOTIFICATION API] Request details: {
   tokensCount: 3,
   title: "💳 New Expense Added",
-  messageBodyPreview: "John paid $50.00 for Groceries",
+  messageBodyPreview: "John paid ₹50.00 for Groceries",
   dataKeys: ["type", "url", "itemId"]
 }
 ✅ [NOTIFICATION API] Validation passed. Preparing message...

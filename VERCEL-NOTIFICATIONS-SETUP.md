@@ -105,12 +105,12 @@ Or push to your GitHub repository and Vercel will auto-deploy.
 
 All users receive push notifications for:
 
-1. ✅ **Expense Created** - "John paid $50.00 for Groceries"
+1. ✅ **Expense Created** - "John paid ₹50.00 for Groceries"
 2. ✅ **Expense Updated** - "John updated expense: Groceries (amount changed)"
-3. ✅ **Expense Deleted** - "John deleted expense: Groceries ($50.00)"
-4. ✅ **Settlement Created** - "John settled up $25.00 with you"
+3. ✅ **Expense Deleted** - "John deleted expense: Groceries (₹50.00)"
+4. ✅ **Settlement Created** - "John settled up ₹25.00 with you"
 5. ✅ **Settlement Updated** - "John updated a settlement with you"
-6. ✅ **Settlement Deleted** - "John removed a settlement of $25.00"
+6. ✅ **Settlement Deleted** - "John removed a settlement of ₹25.00"
 
 ## Files Changed
 

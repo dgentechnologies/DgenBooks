@@ -45,7 +45,7 @@ export async function createSettlement(
       // Notify the recipient
       notifyUsers(firestore, [settlementData.toId], {
         title: '✅ Payment Received',
-        body: `${payerName} settled up $${settlementData.amount.toFixed(2)} with you`,
+        body: `${payerName} settled up ₹${settlementData.amount.toFixed(2)} with you`,
         data: {
           type: 'settlement',
           url: '/settle',
@@ -108,7 +108,7 @@ export async function updateSettlement(
       const afterAmount = updates.amount !== undefined ? updates.amount : beforeData.amount;
       let changeDescription = '';
       if (beforeData.amount !== afterAmount && typeof afterAmount === 'number' && typeof beforeData.amount === 'number') {
-        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterAmount.toFixed(2)})`;
+        changeDescription = ` (amount changed from ₹${beforeData.amount.toFixed(2)} to ₹${afterAmount.toFixed(2)})`;
       } else {
         changeDescription = ' (details updated)';
       }
@@ -175,7 +175,7 @@ export async function deleteSettlement(
       
       notifyUsers(firestore, [settlementData.toId], {
         title: '🗑️ Settlement Deleted',
-        body: `${payerName} removed a settlement of $${amount}`,
+        body: `${payerName} removed a settlement of ₹${amount}`,
         data: {
           type: 'settlement_deleted',
           url: '/settle',

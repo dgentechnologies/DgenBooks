@@ -51,7 +51,7 @@ export async function createPurchase(
       // Send notification
       notifyUsers(firestore, usersToNotify, {
         title: '💳 New Expense Added',
-        body: `${payerName} paid $${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
+        body: `${payerName} paid ₹${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
         data: {
           type: 'expense',
           url: '/log',
@@ -117,7 +117,7 @@ export async function updatePurchase(
         // Build change description
         let changeDescription = '';
         if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
-          changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+          changeDescription = ` (amount changed from ₹${beforeData.amount.toFixed(2)} to ₹${afterData.amount.toFixed(2)})`;
         } else if (beforeData.itemName !== afterData.itemName) {
           changeDescription = ` (item name changed)`;
         } else {
@@ -194,7 +194,7 @@ export async function deletePurchase(
         
         notifyUsers(firestore, usersToNotify, {
           title: '🗑️ Expense Deleted',
-          body: `${deleterName} deleted expense: ${purchaseData.itemName || 'an expense'} ($${amount})`,
+          body: `${deleterName} deleted expense: ${purchaseData.itemName || 'an expense'} (₹${amount})`,
           data: {
             type: 'expense_deleted',
             url: '/log',

@@ -44,12 +44,19 @@ Push Notification to User Devices
 
 ### What Uses Firestore (Free Tier)
 
-The following Firestore features are used and are FREE:
+The following Firestore features are used and are FREE on the Spark plan:
 - ✅ **Storing FCM tokens** in user documents (necessary for notifications)
 - ✅ **Authentication** (Firebase Auth)
-- ✅ **Database** for expenses, settlements, users (within free limits)
+- ✅ **Database** for expenses, settlements, users
 
-These are covered by Firebase Spark (free) plan. **You do NOT need to upgrade to Blaze plan.**
+**Free Tier Limits (Spark Plan):**
+- 50,000 reads/day
+- 20,000 writes/day
+- 20,000 deletes/day
+- 1 GB storage
+- 10 GB/month network egress
+
+For typical expense tracking usage (small teams), these limits are more than sufficient. **You do NOT need to upgrade to Blaze plan** for this app to work.
 
 ## Setup Instructions
 

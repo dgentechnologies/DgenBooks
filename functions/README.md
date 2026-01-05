@@ -1,8 +1,8 @@
 # Firebase Cloud Functions for DgenBooks
 
-⚠️ **DEPRECATED - NOT IN USE**
+⚠️ **DEPRECATED - NOT CURRENTLY IN USE**
 
-This directory contains Firebase Cloud Functions that were originally designed to handle push notifications. However, **these functions are NOT currently deployed or used** to avoid Firebase Blaze plan costs.
+This directory contains Firebase Cloud Functions code that was originally designed to handle push notifications. However, **these functions are NOT currently deployed or in use** to avoid Firebase Blaze plan costs.
 
 ## Current Notification Implementation
 

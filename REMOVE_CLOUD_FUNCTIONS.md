@@ -13,7 +13,7 @@ Firebase Cloud Functions require the **Blaze (pay-as-you-go) plan** which costs 
 ### 1. Check if Functions are Deployed
 
 1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Select project: `dgenbooks`
+2. Select your project (e.g., `dgenbooks`)
 3. Navigate to **Functions** section in the left sidebar
 4. Check if any functions are listed
 

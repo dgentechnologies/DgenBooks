@@ -118,7 +118,7 @@ export const onPurchaseCreated = functions.firestore
 
 /**
  * Cloud Function: Triggered when a new purchase request is created
- * Notifies admins/team members based on priority
+ * Notifies all team members except the requester
  */
 export const onPurchaseRequestCreated = functions.firestore
   .document('purchaseRequests/{requestId}')
@@ -133,36 +133,173 @@ export const onPurchaseRequestCreated = functions.firestore
       const requesterDoc = await admin.firestore().collection('users').doc(request.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
-      // For urgent requests, notify all users; for standard, notify only admins
-      // Since we don't have a role system, we'll notify all users for urgent requests
-      if (request.priority === 'Urgent') {
-        // Get all users except the requester
-        const usersSnapshot = await admin.firestore().collection('users').get();
-        const usersToNotify = usersSnapshot.docs
-          .map(doc => doc.id)
-          .filter(userId => userId !== request.requestedBy);
+      // Get all users except the requester
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersToNotify = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => userId !== request.requestedBy);
 
-        const notificationPromises = usersToNotify.map((userId: string) => {
-          const costText = request.estimatedCost ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
-          return sendNotificationToUser(
-            userId,
-            {
-              title: '🚨 Urgent Purchase Request',
-              body: `${requesterName} needs ${request.itemName} urgently${costText}`,
-            },
-            {
-              type: 'urgent_request',
-              url: '/requests',
-              itemId: requestId,
-            }
-          );
-        });
-
-        await Promise.all(notificationPromises);
-        console.log(`Sent urgent request notifications for ${requestId}`);
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase request ${requestId}`);
+        return;
       }
+
+      // Use different notification based on priority
+      const isUrgent = request.priority === 'Urgent';
+      const costText = request.estimatedCost ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
+      
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: isUrgent ? '🚨 Urgent Purchase Request' : '📝 New Purchase Request',
+            body: isUrgent 
+              ? `${requesterName} needs ${request.itemName} urgently${costText}`
+              : `${requesterName} requested ${request.itemName}${costText}`,
+          },
+          {
+            type: isUrgent ? 'urgent_request' : 'purchase_request',
+            url: '/requests',
+            itemId: requestId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent purchase request notifications for ${requestId}`);
     } catch (error) {
       console.error('Error processing purchase request notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when a purchase request is updated
+ * Notifies all team members except the one who updated it
+ */
+export const onPurchaseRequestUpdated = functions.firestore
+  .document('purchaseRequests/{requestId}')
+  .onUpdate(async (change, context) => {
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+    const requestId = context.params.requestId;
+
+    console.log('Purchase request updated:', requestId);
+
+    try {
+      // Validate required fields
+      if (!afterData.requestedBy) {
+        console.warn(`Purchase request ${requestId} missing requestedBy, skipping notification`);
+        return;
+      }
+
+      // Get the user who made the request (assuming they also updated it)
+      const requesterDoc = await admin.firestore().collection('users').doc(afterData.requestedBy).get();
+      const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Get all users except the requester
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersToNotify = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => userId !== afterData.requestedBy);
+
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase request ${requestId}`);
+        return;
+      }
+
+      // Build a description of what changed
+      let changeDescription = '';
+      if (beforeData.status !== afterData.status) {
+        changeDescription = ` (status changed to ${afterData.status})`;
+      } else if (beforeData.priority !== afterData.priority) {
+        changeDescription = ` (priority changed to ${afterData.priority})`;
+      } else if (beforeData.estimatedCost !== afterData.estimatedCost && typeof afterData.estimatedCost === 'number' && typeof beforeData.estimatedCost === 'number') {
+        changeDescription = ` (cost changed from $${beforeData.estimatedCost.toFixed(2)} to $${afterData.estimatedCost.toFixed(2)})`;
+      } else if (beforeData.itemName !== afterData.itemName) {
+        changeDescription = ` (item name changed)`;
+      } else {
+        changeDescription = ' (details updated)';
+      }
+
+      // Send notification to each user
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: '✏️ Purchase Request Updated',
+            body: `${requesterName} updated request: ${afterData.itemName || 'a request'}${changeDescription}`,
+          },
+          {
+            type: 'purchase_request_updated',
+            url: '/requests',
+            itemId: requestId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent update notifications for purchase request ${requestId}`);
+    } catch (error) {
+      console.error('Error processing purchase request update notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when a purchase request is deleted
+ * Notifies all team members except the one who created/deleted it
+ */
+export const onPurchaseRequestDeleted = functions.firestore
+  .document('purchaseRequests/{requestId}')
+  .onDelete(async (snapshot, context) => {
+    const request = snapshot.data();
+    const requestId = context.params.requestId;
+
+    console.log('Purchase request deleted:', requestId);
+
+    try {
+      // Validate required fields
+      if (!request.requestedBy) {
+        console.warn(`Purchase request ${requestId} missing requestedBy, skipping notification`);
+        return;
+      }
+
+      // Get the user who made the request
+      const requesterDoc = await admin.firestore().collection('users').doc(request.requestedBy).get();
+      const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Get all users except the requester
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersToNotify = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => userId !== request.requestedBy);
+
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase request ${requestId}`);
+        return;
+      }
+
+      const costText = typeof request.estimatedCost === 'number' ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
+
+      // Send notification to each user
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: '🗑️ Purchase Request Deleted',
+            body: `${requesterName} deleted request: ${request.itemName || 'a request'}${costText}`,
+          },
+          {
+            type: 'purchase_request_deleted',
+            url: '/requests',
+            itemId: requestId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent delete notifications for purchase request ${requestId}`);
+    } catch (error) {
+      console.error('Error processing purchase request delete notification:', error);
     }
   });
 

@@ -5,6 +5,13 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 /**
+ * Helper function to format cost text for notifications
+ */
+function formatCostText(cost: number | undefined | null): string {
+  return cost && typeof cost === 'number' ? ` (~$${cost.toFixed(2)})` : '';
+}
+
+/**
  * Helper function to send FCM notifications to users
  */
 async function sendNotificationToUser(
@@ -146,7 +153,7 @@ export const onPurchaseRequestCreated = functions.firestore
 
       // Use different notification based on priority
       const isUrgent = request.priority === 'Urgent';
-      const costText = request.estimatedCost ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
+      const costText = formatCostText(request.estimatedCost);
       
       const notificationPromises = usersToNotify.map((userId: string) => {
         return sendNotificationToUser(
@@ -192,8 +199,8 @@ export const onPurchaseRequestUpdated = functions.firestore
         return;
       }
 
-      // Get the user who made the request (currently notifying based on original requester)
-      // Note: We use the original requester as we don't track who performs updates
+      // Get the user who made the original request
+      // Note: We notify other users and exclude the original requester since we don't track who performs updates
       const requesterDoc = await admin.firestore().collection('users').doc(afterData.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
@@ -215,19 +222,26 @@ export const onPurchaseRequestUpdated = functions.firestore
       } else if (beforeData.priority !== afterData.priority) {
         changeDescription = ` (priority changed to ${afterData.priority})`;
       } else if (beforeData.estimatedCost !== afterData.estimatedCost) {
-        // Handle cost changes including null/undefined cases
+        // Normalize null/undefined to null for consistent comparison
         const oldCost = typeof beforeData.estimatedCost === 'number' ? beforeData.estimatedCost : null;
         const newCost = typeof afterData.estimatedCost === 'number' ? afterData.estimatedCost : null;
-        if (oldCost !== null && newCost !== null) {
-          changeDescription = ` (cost changed from $${oldCost.toFixed(2)} to $${newCost.toFixed(2)})`;
-        } else if (newCost !== null) {
-          changeDescription = ` (cost set to $${newCost.toFixed(2)})`;
-        } else if (oldCost !== null) {
-          changeDescription = ` (cost removed)`;
+        
+        // Only report change if there's an actual difference between the normalized values
+        if (oldCost !== newCost) {
+          if (oldCost !== null && newCost !== null) {
+            changeDescription = ` (cost changed from $${oldCost.toFixed(2)} to $${newCost.toFixed(2)})`;
+          } else if (newCost !== null) {
+            changeDescription = ` (cost set to $${newCost.toFixed(2)})`;
+          } else if (oldCost !== null) {
+            changeDescription = ` (cost removed)`;
+          }
         }
       } else if (beforeData.itemName !== afterData.itemName) {
         changeDescription = ` (item name changed)`;
-      } else {
+      }
+      
+      // If we still don't have a change description, default to generic message
+      if (!changeDescription) {
         changeDescription = ' (details updated)';
       }
 
@@ -288,7 +302,7 @@ export const onPurchaseRequestDeleted = functions.firestore
         return;
       }
 
-      const costText = typeof request.estimatedCost === 'number' ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
+      const costText = formatCostText(request.estimatedCost);
 
       // Send notification to each user
       const notificationPromises = usersToNotify.map((userId: string) => {

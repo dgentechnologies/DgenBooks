@@ -4,16 +4,19 @@ import * as admin from 'firebase-admin';
 // Initialize Firebase Admin
 admin.initializeApp();
 
+// Shared currency formatter instance for better performance
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
 /**
  * Helper function to format currency in Indian Rupees
  */
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return currencyFormatter.format(amount);
 }
 
 /**
@@ -479,7 +482,7 @@ export const onPurchaseDeleted = functions.firestore
         return;
       }
 
-      const amount = typeof purchase.amount === 'number' ? formatCurrency(purchase.amount) : '₹0';
+      const amount = typeof purchase.amount === 'number' ? formatCurrency(purchase.amount) : formatCurrency(0);
 
       // Send notification to each user
       const notificationPromises = usersToNotify.map((userId: string) => {
@@ -579,7 +582,7 @@ export const onSettlementDeleted = functions.firestore
       const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
-      const amount = typeof settlement.amount === 'number' ? formatCurrency(settlement.amount) : '₹0';
+      const amount = typeof settlement.amount === 'number' ? formatCurrency(settlement.amount) : formatCurrency(0);
 
       // Notify the user who was supposed to receive the payment
       await sendNotificationToUser(

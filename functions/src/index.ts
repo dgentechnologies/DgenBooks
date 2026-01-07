@@ -8,7 +8,14 @@ admin.initializeApp();
  * Helper function to format cost text for notifications
  */
 function formatCostText(cost: number | undefined | null): string {
-  return cost && typeof cost === 'number' ? ` (~$${cost.toFixed(2)})` : '';
+  return typeof cost === 'number' ? ` (~$${cost.toFixed(2)})` : '';
+}
+
+/**
+ * Helper function to normalize cost values for comparison
+ */
+function normalizeCost(cost: number | undefined | null): number | null {
+  return typeof cost === 'number' ? cost : null;
 }
 
 /**
@@ -223,8 +230,8 @@ export const onPurchaseRequestUpdated = functions.firestore
         changeDescription = ` (priority changed to ${afterData.priority})`;
       } else if (beforeData.estimatedCost !== afterData.estimatedCost) {
         // Normalize null/undefined to null for consistent comparison
-        const oldCost = typeof beforeData.estimatedCost === 'number' ? beforeData.estimatedCost : null;
-        const newCost = typeof afterData.estimatedCost === 'number' ? afterData.estimatedCost : null;
+        const oldCost = normalizeCost(beforeData.estimatedCost);
+        const newCost = normalizeCost(afterData.estimatedCost);
         
         // Only report change if there's an actual difference between the normalized values
         if (oldCost !== newCost) {

@@ -192,7 +192,8 @@ export const onPurchaseRequestUpdated = functions.firestore
         return;
       }
 
-      // Get the user who made the request (assuming they also updated it)
+      // Get the user who made the request (currently notifying based on original requester)
+      // Note: We use the original requester as we don't track who performs updates
       const requesterDoc = await admin.firestore().collection('users').doc(afterData.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
@@ -213,8 +214,17 @@ export const onPurchaseRequestUpdated = functions.firestore
         changeDescription = ` (status changed to ${afterData.status})`;
       } else if (beforeData.priority !== afterData.priority) {
         changeDescription = ` (priority changed to ${afterData.priority})`;
-      } else if (beforeData.estimatedCost !== afterData.estimatedCost && typeof afterData.estimatedCost === 'number' && typeof beforeData.estimatedCost === 'number') {
-        changeDescription = ` (cost changed from $${beforeData.estimatedCost.toFixed(2)} to $${afterData.estimatedCost.toFixed(2)})`;
+      } else if (beforeData.estimatedCost !== afterData.estimatedCost) {
+        // Handle cost changes including null/undefined cases
+        const oldCost = typeof beforeData.estimatedCost === 'number' ? beforeData.estimatedCost : null;
+        const newCost = typeof afterData.estimatedCost === 'number' ? afterData.estimatedCost : null;
+        if (oldCost !== null && newCost !== null) {
+          changeDescription = ` (cost changed from $${oldCost.toFixed(2)} to $${newCost.toFixed(2)})`;
+        } else if (newCost !== null) {
+          changeDescription = ` (cost set to $${newCost.toFixed(2)})`;
+        } else if (oldCost !== null) {
+          changeDescription = ` (cost removed)`;
+        }
       } else if (beforeData.itemName !== afterData.itemName) {
         changeDescription = ` (item name changed)`;
       } else {

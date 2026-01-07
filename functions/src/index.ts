@@ -5,10 +5,22 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 /**
+ * Helper function to format currency in Indian Rupees
+ */
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
  * Helper function to format cost text for notifications
  */
 function formatCostText(cost: number | undefined | null): string {
-  return typeof cost === 'number' ? ` (~$${cost.toFixed(2)})` : '';
+  return typeof cost === 'number' ? ` (~${formatCurrency(cost)})` : '';
 }
 
 /**
@@ -113,7 +125,7 @@ export const onPurchaseCreated = functions.firestore
           userId,
           {
             title: '💳 New Expense Added',
-            body: `${payerName} paid $${purchase.amount.toFixed(2)} for ${purchase.itemName}`,
+            body: `${payerName} paid ${formatCurrency(purchase.amount)} for ${purchase.itemName}`,
           },
           {
             type: 'expense',
@@ -236,9 +248,9 @@ export const onPurchaseRequestUpdated = functions.firestore
         // Only report change if there's an actual difference between the normalized values
         if (oldCost !== newCost) {
           if (oldCost !== null && newCost !== null) {
-            changeDescription = ` (cost changed from $${oldCost.toFixed(2)} to $${newCost.toFixed(2)})`;
+            changeDescription = ` (cost changed from ${formatCurrency(oldCost)} to ${formatCurrency(newCost)})`;
           } else if (newCost !== null) {
-            changeDescription = ` (cost set to $${newCost.toFixed(2)})`;
+            changeDescription = ` (cost set to ${formatCurrency(newCost)})`;
           } else if (oldCost !== null) {
             changeDescription = ` (cost removed)`;
           }
@@ -356,7 +368,7 @@ export const onSettlementCreated = functions.firestore
         settlement.toId,
         {
           title: '✅ Payment Received',
-          body: `${payerName} settled up $${settlement.amount.toFixed(2)} with you`,
+          body: `${payerName} settled up ${formatCurrency(settlement.amount)} with you`,
         },
         {
           type: 'settlement',
@@ -406,7 +418,7 @@ export const onPurchaseUpdated = functions.firestore
       // Build a description of what changed
       let changeDescription = '';
       if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
-        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+        changeDescription = ` (amount changed from ${formatCurrency(beforeData.amount)} to ${formatCurrency(afterData.amount)})`;
       } else if (beforeData.itemName !== afterData.itemName) {
         changeDescription = ` (item name changed)`;
       } else {
@@ -467,7 +479,7 @@ export const onPurchaseDeleted = functions.firestore
         return;
       }
 
-      const amount = typeof purchase.amount === 'number' ? purchase.amount.toFixed(2) : '0.00';
+      const amount = typeof purchase.amount === 'number' ? formatCurrency(purchase.amount) : '₹0';
 
       // Send notification to each user
       const notificationPromises = usersToNotify.map((userId: string) => {
@@ -475,7 +487,7 @@ export const onPurchaseDeleted = functions.firestore
           userId,
           {
             title: '🗑️ Expense Deleted',
-            body: `${deleterName} deleted expense: ${purchase.itemName || 'an expense'} ($${amount})`,
+            body: `${deleterName} deleted expense: ${purchase.itemName || 'an expense'} (${amount})`,
           },
           {
             type: 'expense_deleted',
@@ -519,7 +531,7 @@ export const onSettlementUpdated = functions.firestore
       // Build a description of what changed
       let changeDescription = '';
       if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
-        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+        changeDescription = ` (amount changed from ${formatCurrency(beforeData.amount)} to ${formatCurrency(afterData.amount)})`;
       } else {
         changeDescription = ' (details updated)';
       }
@@ -567,14 +579,14 @@ export const onSettlementDeleted = functions.firestore
       const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
-      const amount = typeof settlement.amount === 'number' ? settlement.amount.toFixed(2) : '0.00';
+      const amount = typeof settlement.amount === 'number' ? formatCurrency(settlement.amount) : '₹0';
 
       // Notify the user who was supposed to receive the payment
       await sendNotificationToUser(
         settlement.toId,
         {
           title: '🗑️ Settlement Deleted',
-          body: `${payerName} removed a settlement of $${amount}`,
+          body: `${payerName} removed a settlement of ${amount}`,
         },
         {
           type: 'settlement_deleted',

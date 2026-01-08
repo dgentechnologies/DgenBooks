@@ -4,6 +4,35 @@ import * as admin from 'firebase-admin';
 // Initialize Firebase Admin
 admin.initializeApp();
 
+// Shared currency formatter instance for better performance
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Helper function to format currency in Indian Rupees
+ */
+function formatCurrency(amount: number): string {
+  return currencyFormatter.format(amount);
+}
+
+/**
+ * Helper function to format cost text for notifications
+ */
+function formatCostText(cost: number | undefined | null): string {
+  return typeof cost === 'number' ? ` (~${formatCurrency(cost)})` : '';
+}
+
+/**
+ * Helper function to normalize cost values for comparison
+ */
+function normalizeCost(cost: number | undefined | null): number | null {
+  return typeof cost === 'number' ? cost : null;
+}
+
 /**
  * Helper function to send FCM notifications to users
  */
@@ -99,7 +128,7 @@ export const onPurchaseCreated = functions.firestore
           userId,
           {
             title: '💳 New Expense Added',
-            body: `${payerName} paid $${purchase.amount.toFixed(2)} for ${purchase.itemName}`,
+            body: `${payerName} paid ${formatCurrency(purchase.amount)} for ${purchase.itemName}`,
           },
           {
             type: 'expense',
@@ -118,7 +147,7 @@ export const onPurchaseCreated = functions.firestore
 
 /**
  * Cloud Function: Triggered when a new purchase request is created
- * Notifies admins/team members based on priority
+ * Notifies all team members except the requester
  */
 export const onPurchaseRequestCreated = functions.firestore
   .document('purchaseRequests/{requestId}')
@@ -133,36 +162,190 @@ export const onPurchaseRequestCreated = functions.firestore
       const requesterDoc = await admin.firestore().collection('users').doc(request.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
-      // For urgent requests, notify all users; for standard, notify only admins
-      // Since we don't have a role system, we'll notify all users for urgent requests
-      if (request.priority === 'Urgent') {
-        // Get all users except the requester
-        const usersSnapshot = await admin.firestore().collection('users').get();
-        const usersToNotify = usersSnapshot.docs
-          .map(doc => doc.id)
-          .filter(userId => userId !== request.requestedBy);
+      // Get all users except the requester
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersToNotify = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => userId !== request.requestedBy);
 
-        const notificationPromises = usersToNotify.map((userId: string) => {
-          const costText = request.estimatedCost ? ` (~$${request.estimatedCost.toFixed(2)})` : '';
-          return sendNotificationToUser(
-            userId,
-            {
-              title: '🚨 Urgent Purchase Request',
-              body: `${requesterName} needs ${request.itemName} urgently${costText}`,
-            },
-            {
-              type: 'urgent_request',
-              url: '/requests',
-              itemId: requestId,
-            }
-          );
-        });
-
-        await Promise.all(notificationPromises);
-        console.log(`Sent urgent request notifications for ${requestId}`);
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase request ${requestId}`);
+        return;
       }
+
+      // Use different notification based on priority
+      const isUrgent = request.priority === 'Urgent';
+      const costText = formatCostText(request.estimatedCost);
+      
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: isUrgent ? '🚨 Urgent Purchase Request' : '📝 New Purchase Request',
+            body: isUrgent 
+              ? `${requesterName} needs ${request.itemName} urgently${costText}`
+              : `${requesterName} requested ${request.itemName}${costText}`,
+          },
+          {
+            type: isUrgent ? 'urgent_request' : 'purchase_request',
+            url: '/requests',
+            itemId: requestId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent purchase request notifications for ${requestId}`);
     } catch (error) {
       console.error('Error processing purchase request notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when a purchase request is updated
+ * Notifies all team members except the one who updated it
+ */
+export const onPurchaseRequestUpdated = functions.firestore
+  .document('purchaseRequests/{requestId}')
+  .onUpdate(async (change, context) => {
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+    const requestId = context.params.requestId;
+
+    console.log('Purchase request updated:', requestId);
+
+    try {
+      // Validate required fields
+      if (!afterData.requestedBy) {
+        console.warn(`Purchase request ${requestId} missing requestedBy, skipping notification`);
+        return;
+      }
+
+      // Get the user who made the original request
+      // Note: We notify other users and exclude the original requester since we don't track who performs updates
+      const requesterDoc = await admin.firestore().collection('users').doc(afterData.requestedBy).get();
+      const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Get all users except the requester
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersToNotify = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => userId !== afterData.requestedBy);
+
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase request ${requestId}`);
+        return;
+      }
+
+      // Build a description of what changed
+      let changeDescription = '';
+      if (beforeData.status !== afterData.status) {
+        changeDescription = ` (status changed to ${afterData.status})`;
+      } else if (beforeData.priority !== afterData.priority) {
+        changeDescription = ` (priority changed to ${afterData.priority})`;
+      } else if (beforeData.estimatedCost !== afterData.estimatedCost) {
+        // Normalize null/undefined to null for consistent comparison
+        const oldCost = normalizeCost(beforeData.estimatedCost);
+        const newCost = normalizeCost(afterData.estimatedCost);
+        
+        // Only report change if there's an actual difference between the normalized values
+        if (oldCost !== newCost) {
+          if (oldCost !== null && newCost !== null) {
+            changeDescription = ` (cost changed from ${formatCurrency(oldCost)} to ${formatCurrency(newCost)})`;
+          } else if (newCost !== null) {
+            changeDescription = ` (cost set to ${formatCurrency(newCost)})`;
+          } else if (oldCost !== null) {
+            changeDescription = ` (cost removed)`;
+          }
+        }
+      } else if (beforeData.itemName !== afterData.itemName) {
+        changeDescription = ` (item name changed)`;
+      }
+      
+      // If we still don't have a change description, default to generic message
+      if (!changeDescription) {
+        changeDescription = ' (details updated)';
+      }
+
+      // Send notification to each user
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: '✏️ Purchase Request Updated',
+            body: `${requesterName} updated request: ${afterData.itemName || 'a request'}${changeDescription}`,
+          },
+          {
+            type: 'purchase_request_updated',
+            url: '/requests',
+            itemId: requestId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent update notifications for purchase request ${requestId}`);
+    } catch (error) {
+      console.error('Error processing purchase request update notification:', error);
+    }
+  });
+
+/**
+ * Cloud Function: Triggered when a purchase request is deleted
+ * Notifies all team members except the one who created/deleted it
+ */
+export const onPurchaseRequestDeleted = functions.firestore
+  .document('purchaseRequests/{requestId}')
+  .onDelete(async (snapshot, context) => {
+    const request = snapshot.data();
+    const requestId = context.params.requestId;
+
+    console.log('Purchase request deleted:', requestId);
+
+    try {
+      // Validate required fields
+      if (!request.requestedBy) {
+        console.warn(`Purchase request ${requestId} missing requestedBy, skipping notification`);
+        return;
+      }
+
+      // Get the user who made the request
+      const requesterDoc = await admin.firestore().collection('users').doc(request.requestedBy).get();
+      const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
+
+      // Get all users except the requester
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersToNotify = usersSnapshot.docs
+        .map(doc => doc.id)
+        .filter(userId => userId !== request.requestedBy);
+
+      if (usersToNotify.length === 0) {
+        console.log(`No users to notify for purchase request ${requestId}`);
+        return;
+      }
+
+      const costText = formatCostText(request.estimatedCost);
+
+      // Send notification to each user
+      const notificationPromises = usersToNotify.map((userId: string) => {
+        return sendNotificationToUser(
+          userId,
+          {
+            title: '🗑️ Purchase Request Deleted',
+            body: `${requesterName} deleted request: ${request.itemName || 'a request'}${costText}`,
+          },
+          {
+            type: 'purchase_request_deleted',
+            url: '/requests',
+            itemId: requestId,
+          }
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`Sent delete notifications for purchase request ${requestId}`);
+    } catch (error) {
+      console.error('Error processing purchase request delete notification:', error);
     }
   });
 
@@ -188,7 +371,7 @@ export const onSettlementCreated = functions.firestore
         settlement.toId,
         {
           title: '✅ Payment Received',
-          body: `${payerName} settled up $${settlement.amount.toFixed(2)} with you`,
+          body: `${payerName} settled up ${formatCurrency(settlement.amount)} with you`,
         },
         {
           type: 'settlement',
@@ -238,7 +421,7 @@ export const onPurchaseUpdated = functions.firestore
       // Build a description of what changed
       let changeDescription = '';
       if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
-        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+        changeDescription = ` (amount changed from ${formatCurrency(beforeData.amount)} to ${formatCurrency(afterData.amount)})`;
       } else if (beforeData.itemName !== afterData.itemName) {
         changeDescription = ` (item name changed)`;
       } else {
@@ -299,7 +482,7 @@ export const onPurchaseDeleted = functions.firestore
         return;
       }
 
-      const amount = typeof purchase.amount === 'number' ? purchase.amount.toFixed(2) : '0.00';
+      const amount = typeof purchase.amount === 'number' ? formatCurrency(purchase.amount) : formatCurrency(0);
 
       // Send notification to each user
       const notificationPromises = usersToNotify.map((userId: string) => {
@@ -307,7 +490,7 @@ export const onPurchaseDeleted = functions.firestore
           userId,
           {
             title: '🗑️ Expense Deleted',
-            body: `${deleterName} deleted expense: ${purchase.itemName || 'an expense'} ($${amount})`,
+            body: `${deleterName} deleted expense: ${purchase.itemName || 'an expense'} (${amount})`,
           },
           {
             type: 'expense_deleted',
@@ -351,7 +534,7 @@ export const onSettlementUpdated = functions.firestore
       // Build a description of what changed
       let changeDescription = '';
       if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
-        changeDescription = ` (amount changed from $${beforeData.amount.toFixed(2)} to $${afterData.amount.toFixed(2)})`;
+        changeDescription = ` (amount changed from ${formatCurrency(beforeData.amount)} to ${formatCurrency(afterData.amount)})`;
       } else {
         changeDescription = ' (details updated)';
       }
@@ -399,14 +582,14 @@ export const onSettlementDeleted = functions.firestore
       const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
-      const amount = typeof settlement.amount === 'number' ? settlement.amount.toFixed(2) : '0.00';
+      const amount = typeof settlement.amount === 'number' ? formatCurrency(settlement.amount) : formatCurrency(0);
 
       // Notify the user who was supposed to receive the payment
       await sendNotificationToUser(
         settlement.toId,
         {
           title: '🗑️ Settlement Deleted',
-          body: `${payerName} removed a settlement of $${amount}`,
+          body: `${payerName} removed a settlement of ${amount}`,
         },
         {
           type: 'settlement_deleted',

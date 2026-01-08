@@ -445,7 +445,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
               })}
             </div>
             {/* Show total validation */}
-            {amount > 0 && paidByAmounts && (
+            {typeof amount === 'number' && amount > 0 && paidByAmounts && (
               <div className={cn(
                 "text-sm p-2 rounded-md",
                 Math.abs(Object.values(paidByAmounts).reduce((sum, amt) => sum + (amt || 0), 0) - amount) < 0.01

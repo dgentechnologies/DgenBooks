@@ -212,7 +212,7 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
         const payers = Object.keys(transaction.paidByAmounts)
           .filter(userId => (transaction.paidByAmounts?.[userId] || 0) > 0)
           .map(userId => getUser(userId))
-          .filter(Boolean);
+          .filter((user): user is User => user !== null && user !== undefined);
         
         if (payers.length === 0) {
           const fallbackUser = getUser(transaction.paidById);

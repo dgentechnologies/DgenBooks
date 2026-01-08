@@ -117,13 +117,21 @@ export async function updatePurchase(
     // Send notifications
     if (beforeData) {
       const afterData = { ...beforeData, ...updates };
+      
+      // Get all payers (single or multiple)
+      const allPayers = afterData.paymentType === 'multiple' && afterData.paidByAmounts
+        ? Object.keys(afterData.paidByAmounts)
+        : [afterData.paidById];
+      
       const usersToNotify = (afterData.splitWith || []).filter(
-        (id: string) => id !== beforeData.paidById
+        (id: string) => !allPayers.includes(id)
       );
       
       console.log('🔔 [updatePurchase] Expense updated:', {
         purchaseId: purchaseId,
         paidById: beforeData.paidById,
+        paymentType: afterData.paymentType,
+        paidByAmounts: afterData.paidByAmounts,
         beforeAmount: beforeData.amount,
         afterAmount: afterData.amount,
         itemName: afterData.itemName,
@@ -131,9 +139,22 @@ export async function updatePurchase(
       });
       
       if (usersToNotify.length > 0) {
-        // Get updater name
-        const updaterDoc = await getDoc(doc(firestore, 'users', beforeData.paidById));
-        const updaterName = updaterDoc.exists() ? updaterDoc.data()?.name || 'Someone' : 'Someone';
+        // Get updater name(s)
+        let updaterDescription = '';
+        if (afterData.paymentType === 'multiple' && afterData.paidByAmounts) {
+          const payerNames = await Promise.all(
+            Object.keys(afterData.paidByAmounts).map(async (payerId) => {
+              const payerDoc = await getDoc(doc(firestore, 'users', payerId));
+              return payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+            })
+          );
+          updaterDescription = payerNames.length > 1 
+            ? `${payerNames.slice(0, -1).join(', ')} and ${payerNames[payerNames.length - 1]}`
+            : payerNames[0] || 'Someone';
+        } else {
+          const updaterDoc = await getDoc(doc(firestore, 'users', afterData.paidById));
+          updaterDescription = updaterDoc.exists() ? updaterDoc.data()?.name || 'Someone' : 'Someone';
+        }
         
         // Build change description
         let changeDescription = '';
@@ -145,11 +166,11 @@ export async function updatePurchase(
           changeDescription = ' (details updated)';
         }
         
-        console.log(`📢 [updatePurchase] Notifying ${usersToNotify.length} user(s) about expense update by ${updaterName}`);
+        console.log(`📢 [updatePurchase] Notifying ${usersToNotify.length} user(s) about expense update by ${updaterDescription}`);
         
         notifyUsers(firestore, usersToNotify, {
           title: '✏️ Expense Updated',
-          body: `${updaterName} updated expense: ${afterData.itemName || 'an expense'}${changeDescription}`,
+          body: `${updaterDescription} updated expense: ${afterData.itemName || 'an expense'}${changeDescription}`,
           data: {
             type: 'expense_updated',
             url: '/log',
@@ -192,30 +213,50 @@ export async function deletePurchase(
     
     // Send notifications
     if (purchaseData && purchaseData.paidById) {
+      // Get all payers (single or multiple)
+      const allPayers = purchaseData.paymentType === 'multiple' && purchaseData.paidByAmounts
+        ? Object.keys(purchaseData.paidByAmounts)
+        : [purchaseData.paidById];
+      
       const usersToNotify = (purchaseData.splitWith || []).filter(
-        (id: string) => id !== purchaseData.paidById
+        (id: string) => !allPayers.includes(id)
       );
       
       console.log('🔔 [deletePurchase] Expense deleted:', {
         purchaseId: purchaseId,
         paidById: purchaseData.paidById,
+        paymentType: purchaseData.paymentType,
+        paidByAmounts: purchaseData.paidByAmounts,
         amount: purchaseData.amount,
         itemName: purchaseData.itemName,
         usersToNotify: usersToNotify
       });
       
       if (usersToNotify.length > 0) {
-        // Get deleter name
-        const deleterDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
-        const deleterName = deleterDoc.exists() ? deleterDoc.data()?.name || 'Someone' : 'Someone';
+        // Get deleter name(s)
+        let deleterDescription = '';
+        if (purchaseData.paymentType === 'multiple' && purchaseData.paidByAmounts) {
+          const payerNames = await Promise.all(
+            Object.keys(purchaseData.paidByAmounts).map(async (payerId) => {
+              const payerDoc = await getDoc(doc(firestore, 'users', payerId));
+              return payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+            })
+          );
+          deleterDescription = payerNames.length > 1 
+            ? `${payerNames.slice(0, -1).join(', ')} and ${payerNames[payerNames.length - 1]}`
+            : payerNames[0] || 'Someone';
+        } else {
+          const deleterDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
+          deleterDescription = deleterDoc.exists() ? deleterDoc.data()?.name || 'Someone' : 'Someone';
+        }
         
         const amount = typeof purchaseData.amount === 'number' ? purchaseData.amount.toFixed(2) : '0.00';
         
-        console.log(`📢 [deletePurchase] Notifying ${usersToNotify.length} user(s) about expense deletion by ${deleterName}`);
+        console.log(`📢 [deletePurchase] Notifying ${usersToNotify.length} user(s) about expense deletion by ${deleterDescription}`);
         
         notifyUsers(firestore, usersToNotify, {
           title: '🗑️ Expense Deleted',
-          body: `${deleterName} deleted expense: ${purchaseData.itemName || 'an expense'} (₹${amount})`,
+          body: `${deleterDescription} deleted expense: ${purchaseData.itemName || 'an expense'} (₹${amount})`,
           data: {
             type: 'expense_deleted',
             url: '/log',

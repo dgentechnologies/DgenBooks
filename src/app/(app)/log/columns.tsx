@@ -206,6 +206,50 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     header: "Paid By / From",
     cell: ({ row }) => {
       const transaction = row.original;
+      
+      // Handle multiple payers for purchases
+      if (transaction.type === 'purchase' && transaction.paymentType === 'multiple' && transaction.paidByAmounts) {
+        const payers = Object.keys(transaction.paidByAmounts)
+          .filter(userId => (transaction.paidByAmounts?.[userId] || 0) > 0)
+          .map(userId => getUser(userId))
+          .filter((user): user is User => user !== null && user !== undefined);
+        
+        if (payers.length === 0) {
+          const fallbackUser = getUser(transaction.paidById);
+          return fallbackUser ? (
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={fallbackUser.avatar} />
+                <AvatarFallback>{fallbackUser.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <span>{formatName(fallbackUser.name)}</span>
+            </div>
+          ) : null;
+        }
+        
+        return (
+          <div className="flex items-center gap-1">
+            <div className="flex -space-x-2">
+              {payers.slice(0, 3).map((payer) => (
+                <Avatar key={payer.id} className="h-8 w-8 border-2 border-background">
+                  <AvatarImage src={payer.avatar} />
+                  <AvatarFallback>{payer.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            <span className="text-sm ml-2">
+              {payers.length === 1 
+                ? formatName(payers[0].name)
+                : payers.length === 2
+                ? `${formatName(payers[0].name)} & ${formatName(payers[1].name)}`
+                : `${payers.length} people`
+              }
+            </span>
+          </div>
+        );
+      }
+      
+      // Handle single payer or settlements
       const user = getUser(transaction.type === 'purchase' ? transaction.paidById : transaction.fromId);
       if (!user) return null;
       return (

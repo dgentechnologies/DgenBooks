@@ -15,20 +15,44 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
 
   for (const transaction of transactions) {
     if (transaction.type === 'purchase') {
-      const { paidById, amount, splitWith } = transaction;
+      const { paidById, amount, splitWith, paymentType, paidByAmounts } = transaction;
       if (splitWith.length === 0) continue;
-      
-      // Skip transaction if paidById is not in users
-      if (!userIds.has(paidById)) continue;
       
       const share = amount / splitWith.length;
 
-      for (const participantId of splitWith) {
-        if (participantId !== paidById && userIds.has(participantId)) {
-          const participantBalance = balances.get(participantId);
-          const currentOwedToPayer = participantBalance?.get(paidById);
-          if (currentOwedToPayer !== undefined) {
-            participantBalance!.set(paidById, currentOwedToPayer + share);
+      // Handle multi-person payment
+      if (paymentType === 'multiple' && paidByAmounts) {
+        // For each payer, calculate what they're owed
+        for (const [payerId, amountPaid] of Object.entries(paidByAmounts)) {
+          if (!userIds.has(payerId)) continue;
+          
+          // Calculate what this payer is owed from each participant
+          for (const participantId of splitWith) {
+            if (participantId !== payerId && userIds.has(participantId)) {
+              const participantBalance = balances.get(participantId);
+              const currentOwedToPayer = participantBalance?.get(payerId);
+              
+              // Participant's share of what this payer paid
+              const owedToThisPayer = amountPaid / splitWith.length;
+              
+              if (currentOwedToPayer !== undefined) {
+                participantBalance!.set(payerId, currentOwedToPayer + owedToThisPayer);
+              }
+            }
+          }
+        }
+      } else {
+        // Handle single-person payment (original logic)
+        // Skip transaction if paidById is not in users
+        if (!userIds.has(paidById)) continue;
+
+        for (const participantId of splitWith) {
+          if (participantId !== paidById && userIds.has(participantId)) {
+            const participantBalance = balances.get(participantId);
+            const currentOwedToPayer = participantBalance?.get(paidById);
+            if (currentOwedToPayer !== undefined) {
+              participantBalance!.set(paidById, currentOwedToPayer + share);
+            }
           }
         }
       }

@@ -55,7 +55,26 @@ export function RecentActivity({ transactions, users }: RecentActivityProps) {
                           {transaction.itemName}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                          Paid by {formatName(getUser(users, transaction.paidById)?.name || '')}
+                          {transaction.paymentType === 'multiple' && transaction.paidByAmounts ? (
+                            (() => {
+                              const payers = Object.keys(transaction.paidByAmounts)
+                                .filter(userId => (transaction.paidByAmounts?.[userId] || 0) > 0)
+                                .map(userId => getUser(users, userId))
+                                .filter(user => user !== null && user !== undefined);
+                              
+                              if (payers.length === 0) {
+                                return `Paid by ${formatName(getUser(users, transaction.paidById)?.name || '')}`;
+                              }
+                              
+                              return payers.length === 1
+                                ? `Paid by ${formatName(payers[0]!.name)}`
+                                : payers.length === 2
+                                ? `Paid by ${formatName(payers[0]!.name)} & ${formatName(payers[1]!.name)}`
+                                : `Paid by ${payers.length} people`;
+                            })()
+                          ) : (
+                            `Paid by ${formatName(getUser(users, transaction.paidById)?.name || '')}`
+                          )}
                         </p>
                       </>
                     ) : (

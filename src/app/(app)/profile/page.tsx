@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User, DollarSign, Wallet } from "lucide-react";
+import { Loader2, User, IndianRupee, Wallet } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 import { toast } from "@/lib/toast";
 import { useUserPurchases } from "@/hooks/use-purchases";
@@ -37,10 +37,20 @@ export default function ProfilePage() {
     // Combine purchases and settlements into transactions
     const transactions: Transaction[] = [...purchases, ...settlements];
     
-    // Calculate total spent (purchases paid by this user)
-    const spent = purchases
-      .filter((p) => p.paidById === user.uid)
-      .reduce((sum, p) => sum + p.amount, 0);
+    // Calculate total spent including multi-payer expenses
+    const spent = purchases.reduce((sum, p) => {
+      // For single-payer expenses
+      if (p.paymentType !== 'multiple' && p.paidById === user.uid) {
+        return sum + p.amount;
+      }
+      
+      // For multi-payer expenses, add the amount this user paid
+      if (p.paymentType === 'multiple' && p.paidByAmounts && p.paidByAmounts[user.uid]) {
+        return sum + p.paidByAmounts[user.uid];
+      }
+      
+      return sum;
+    }, 0);
 
     // Calculate current balance
     const { netBalances } = calculateBalances(transactions, users);
@@ -100,7 +110,7 @@ export default function ProfilePage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Spent
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isStatsLoading ? (

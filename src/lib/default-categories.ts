@@ -10,5 +10,6 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id' | 'createdAt'>[] = [
   { name: "Tools & Equipment", icon: "Wrench", isDefault: true },
   { name: "Software & Subscriptions", icon: "Code", isDefault: true },
   { name: "Logistics", icon: "Truck", isDefault: true },
+  { name: "Business", icon: "Briefcase", isDefault: true },
   { name: "Other", icon: "PackageOpen", isDefault: true },
 ];

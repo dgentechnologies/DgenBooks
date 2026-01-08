@@ -10,6 +10,7 @@ import {
   PackageOpen,
   UtensilsCrossed,
   Plane,
+  Briefcase,
   type LucideIcon 
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export const categoryIcons: Record<string, LucideIcon> = {
   "Software & Subscriptions": Code,
   "Logistics & Travel": Truck,
   "Logistics": Truck,
+  "Business": Briefcase,
   "Other": PackageOpen,
 };
 
@@ -45,6 +47,7 @@ export function getIconByName(iconName: string): LucideIcon {
     PackageOpen,
     UtensilsCrossed,
     Plane,
+    Briefcase,
   };
   return icons[iconName] || PackageOpen;
 }

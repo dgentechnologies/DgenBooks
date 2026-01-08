@@ -65,9 +65,21 @@ const chartConfig = {
 export function TotalSpendingChart({ purchases, users }: TotalSpendingChartProps) {
   const chartData = useMemo(() => {
     const spendingByUser: ChartDataEntry[] = users.map((user, index) => {
-      const totalSpent = purchases
-        .filter(p => p.paidById === user.id)
-        .reduce((sum, p) => sum + p.amount, 0);
+      // Calculate total spent including multi-payer expenses
+      const totalSpent = purchases.reduce((sum, p) => {
+        // For single-payer expenses
+        if (p.paymentType !== 'multiple' && p.paidById === user.id) {
+          return sum + p.amount;
+        }
+        
+        // For multi-payer expenses, add the amount this user paid
+        if (p.paymentType === 'multiple' && p.paidByAmounts && p.paidByAmounts[user.id]) {
+          return sum + p.paidByAmounts[user.id];
+        }
+        
+        return sum;
+      }, 0);
+      
       return {
         user: shortenName(user.name), // Shortened name for X-axis
         fullName: formatName(user.name), // Full formatted name for tooltip

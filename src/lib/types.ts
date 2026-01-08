@@ -22,8 +22,11 @@ export type Purchase = {
   category: string;
   date: string; // ISO string
   amount: number;
-  paidById: string;
+  paidById: string; // For backward compatibility and single-payer expenses
   splitWith: string[]; // array of user IDs
+  // New fields for multi-person payment support
+  paymentType?: 'single' | 'multiple'; // Optional for backward compatibility
+  paidByAmounts?: Record<string, number>; // Map of userId to amount paid (for multiple payers)
 };
 
 export type Settlement = {

@@ -26,15 +26,22 @@ export async function createPurchase(
     createdAt: serverTimestamp(),
   });
   
-  // Send notifications to other users in the split (excluding the payer)
+  // Send notifications to other users in the split (excluding the payer(s))
   try {
+    // Get all payers (single or multiple)
+    const allPayers = purchaseData.paymentType === 'multiple' && purchaseData.paidByAmounts
+      ? Object.keys(purchaseData.paidByAmounts)
+      : [purchaseData.paidById];
+    
     const usersToNotify = (purchaseData.splitWith || []).filter(
-      (id: string) => id !== purchaseData.paidById
+      (id: string) => !allPayers.includes(id)
     );
     
     console.log('🔔 [createPurchase] Expense created:', {
       purchaseId: docRef.id,
       paidById: purchaseData.paidById,
+      paymentType: purchaseData.paymentType,
+      paidByAmounts: purchaseData.paidByAmounts,
       amount: purchaseData.amount,
       itemName: purchaseData.itemName,
       splitWith: purchaseData.splitWith,
@@ -42,16 +49,29 @@ export async function createPurchase(
     });
     
     if (usersToNotify.length > 0) {
-      // Get payer name
-      const payerDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
-      const payerName = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+      // Get payer name(s)
+      let payerDescription = '';
+      if (purchaseData.paymentType === 'multiple' && purchaseData.paidByAmounts) {
+        const payerNames = await Promise.all(
+          Object.keys(purchaseData.paidByAmounts).map(async (payerId) => {
+            const payerDoc = await getDoc(doc(firestore, 'users', payerId));
+            return payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+          })
+        );
+        payerDescription = payerNames.length > 1 
+          ? `${payerNames.slice(0, -1).join(', ')} and ${payerNames[payerNames.length - 1]}`
+          : payerNames[0] || 'Multiple users';
+      } else {
+        const payerDoc = await getDoc(doc(firestore, 'users', purchaseData.paidById));
+        payerDescription = payerDoc.exists() ? payerDoc.data()?.name || 'Someone' : 'Someone';
+      }
       
-      console.log(`📢 [createPurchase] Notifying ${usersToNotify.length} user(s) about new expense by ${payerName}`);
+      console.log(`📢 [createPurchase] Notifying ${usersToNotify.length} user(s) about new expense by ${payerDescription}`);
       
       // Send notification
       notifyUsers(firestore, usersToNotify, {
         title: '💳 New Expense Added',
-        body: `${payerName} paid ₹${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
+        body: `${payerDescription} paid ₹${purchaseData.amount.toFixed(2)} for ${purchaseData.itemName}`,
         data: {
           type: 'expense',
           url: '/log',
@@ -73,13 +93,14 @@ export async function createPurchase(
 
 /**
  * Update an existing purchase
- * Only the user who paid can update their purchase
+ * For single-payer: Only the user who paid can update
+ * For multi-payer: Any of the payers can update
  */
 export async function updatePurchase(
   firestore: Firestore,
   userId: string,
   purchaseId: string,
-  updates: Partial<Omit<Purchase, 'id' | 'type' | 'paidById'>>
+  updates: Partial<Omit<Purchase, 'id' | 'type' | 'paidById' | 'paymentType'>>
 ): Promise<void> {
   try {
     const purchaseRef = doc(firestore, `purchases/${purchaseId}`);

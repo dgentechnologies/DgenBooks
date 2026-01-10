@@ -142,7 +142,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
           amount: values.amount,
           date: values.date.toISOString(),
           splitWith: splitWith,
-          paidByAmounts: values.paymentType === 'multiple' ? values.paidByAmounts : undefined,
+          ...(values.paymentType === 'multiple' && values.paidByAmounts ? { paidByAmounts: values.paidByAmounts } : {}),
         };
         await updatePurchase(firestore, user.uid, expense.id, updates);
         toast.success("Expense Updated", "Successfully updated the expense.");
@@ -156,8 +156,8 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
           date: values.date.toISOString(),
           paymentType: values.paymentType,
           paidById: values.paymentType === 'single' && values.paidById ? values.paidById : user.uid,
-          paidByAmounts: values.paymentType === 'multiple' ? values.paidByAmounts : undefined,
           splitWith: splitWith,
+          ...(values.paymentType === 'multiple' && values.paidByAmounts ? { paidByAmounts: values.paidByAmounts } : {}),
         };
         const purchaseId = await createPurchase(firestore, user.uid, purchaseData);
         

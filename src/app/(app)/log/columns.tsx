@@ -142,7 +142,7 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
 
   // Calculate per-head cost
-  const perHeadCost = transaction.type === 'purchase' 
+  const perHeadCost = transaction.type === 'purchase' && transaction.splitWith.length > 0
     ? transaction.amount / transaction.splitWith.length 
     : 0;
 
@@ -277,14 +277,14 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
             <p className="text-sm font-medium text-muted-foreground">Paid By</p>
             {transaction.paymentType === 'multiple' && payers.length > 0 ? (
               <div className="space-y-2 mt-1">
-                {payers.map(({ user, amount }) => user && (
-                  <div key={user.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                {payers.map(({ user, amount }) => (
+                  <div key={user!.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={user!.avatar} />
+                        <AvatarFallback>{user!.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{formatName(user.name)}</span>
+                      <span className="font-medium">{formatName(user!.name)}</span>
                     </div>
                     <span className="font-semibold">{formatCurrency(amount)}</span>
                   </div>

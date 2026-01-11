@@ -142,7 +142,7 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
 
   // Calculate per-head cost
-  const perHeadCost = transaction.type === 'purchase' && transaction.splitWith?.length > 0
+  const perHeadCost = transaction.type === 'purchase' && (transaction.splitWith?.length || 0) > 0
     ? transaction.amount / transaction.splitWith.length 
     : 0;
 
@@ -309,9 +309,9 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
 
           {/* Split With */}
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Split With ({transaction.splitWith.length} members)</p>
+            <p className="text-sm font-medium text-muted-foreground">Split With ({transaction.splitWith?.length || 0} members)</p>
             <div className="space-y-2 mt-1">
-              {transaction.splitWith.map(userId => {
+              {transaction.splitWith?.map(userId => {
                 const user = getUser(userId);
                 if (!user) return null;
                 return (

@@ -142,7 +142,7 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
 
   // Calculate per-head cost
-  const perHeadCost = transaction.type === 'purchase' && transaction.splitWith.length > 0
+  const perHeadCost = transaction.type === 'purchase' && transaction.splitWith?.length > 0
     ? transaction.amount / transaction.splitWith.length 
     : 0;
 
@@ -221,12 +221,11 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   // Get payers information for multiple payment scenario
   const payers = transaction.paymentType === 'multiple' && transaction.paidByAmounts
     ? Object.entries(transaction.paidByAmounts)
-        .filter(([_, amount]) => amount > 0)
+        .filter(([userId, amount]) => amount > 0 && getUser(userId))
         .map(([userId, amount]) => ({
-          user: getUser(userId),
+          user: getUser(userId)!,
           amount
         }))
-        .filter(p => p.user !== undefined)
     : [];
 
   return (
@@ -277,18 +276,21 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
             <p className="text-sm font-medium text-muted-foreground">Paid By</p>
             {transaction.paymentType === 'multiple' && payers.length > 0 ? (
               <div className="space-y-2 mt-1">
-                {payers.map(({ user, amount }) => (
-                  <div key={user!.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user!.avatar} />
-                        <AvatarFallback>{user!.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{formatName(user!.name)}</span>
+                {payers.map(({ user, amount }) => {
+                  const { id, avatar, name } = user;
+                  return (
+                    <div key={id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={avatar} />
+                          <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{formatName(name)}</span>
+                      </div>
+                      <span className="font-semibold">{formatCurrency(amount)}</span>
                     </div>
-                    <span className="font-semibold">{formatCurrency(amount)}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="flex items-center gap-2 mt-1">

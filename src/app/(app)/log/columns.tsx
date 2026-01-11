@@ -24,7 +24,7 @@ import { deletePurchase } from "@/lib/db/purchases"
 import { deleteSettlement } from "@/lib/db/settlements"
 import { useFirestore, useUser } from "@/firebase"
 import { toast } from "@/lib/toast"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { formatName, formatCurrency } from "@/lib/format"
 
@@ -143,9 +143,11 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
 
   // Calculate per-head cost
   const splitWithLength = transaction.splitWith?.length || 0;
-  const perHeadCost = transaction.type === 'purchase' && splitWithLength > 0
-    ? transaction.amount / splitWithLength
-    : 0;
+  const perHeadCost = useMemo(() => {
+    return transaction.type === 'purchase' && splitWithLength > 0
+      ? transaction.amount / splitWithLength
+      : 0;
+  }, [transaction.type, transaction.amount, splitWithLength]);
 
   if (transaction.type !== 'purchase') {
     // For settlements, show minimal details
@@ -220,15 +222,18 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   const CategoryIcon = getCategoryIcon(transaction.category);
   
   // Get payers information for multiple payment scenario
-  const payers = transaction.paymentType === 'multiple' && transaction.paidByAmounts
-    ? Object.entries(transaction.paidByAmounts)
+  const payers = useMemo(() => {
+    if (transaction.paymentType === 'multiple' && transaction.paidByAmounts) {
+      return Object.entries(transaction.paidByAmounts)
         .filter(([_, amount]) => amount > 0)
         .map(([userId, amount]) => {
           const user = getUser(userId);
           return user ? { user, amount } : null;
         })
-        .filter((payer): payer is { user: User; amount: number } => payer !== null)
-    : [];
+        .filter((payer): payer is { user: User; amount: number } => payer !== null);
+    }
+    return [];
+  }, [transaction.paymentType, transaction.paidByAmounts, users]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

@@ -143,7 +143,7 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
 
   // Calculate per-head cost
   const perHeadCost = transaction.type === 'purchase' && (transaction.splitWith?.length || 0) > 0
-    ? transaction.amount / transaction.splitWith.length 
+    ? transaction.amount / (transaction.splitWith?.length || 1)
     : 0;
 
   if (transaction.type !== 'purchase') {
@@ -221,7 +221,7 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   // Get payers information for multiple payment scenario
   const payers = transaction.paymentType === 'multiple' && transaction.paidByAmounts
     ? Object.entries(transaction.paidByAmounts)
-        .filter(([userId, amount]) => amount > 0 && getUser(userId))
+        .filter(([userId, amount]) => amount > 0 && getUser(userId) !== undefined)
         .map(([userId, amount]) => ({
           user: getUser(userId)!,
           amount

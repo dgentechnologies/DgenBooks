@@ -104,10 +104,6 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
       }
     });
     
-    // Calculate what each person owes before settlements
-    const fromOwesTo = toShareTotal - fromShareTotal + fromPaidTotal - toPaidTotal;
-    const toOwesFrom = fromShareTotal - toShareTotal + toPaidTotal - fromPaidTotal;
-    
     return {
       fromPaidTotal,
       toPaidTotal,
@@ -115,8 +111,6 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
       toShareTotal,
       settlementsFromTo,
       settlementsToFrom,
-      fromOwesTo: Math.max(0, fromOwesTo),
-      toOwesFrom: Math.max(0, toOwesFrom),
     };
   }, [relevantPurchases, relevantSettlements, debt]);
 

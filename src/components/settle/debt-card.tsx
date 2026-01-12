@@ -174,17 +174,17 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
                   // Calculate what each person paid and their share
-                  let fromPaid = 0;
-                  let toPaid = 0;
+                  let expenseFromPaid = 0;
+                  let expenseToPaid = 0;
                   
                   if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
-                    fromPaid = purchase.paidByAmounts[debt.from.id] || 0;
-                    toPaid = purchase.paidByAmounts[debt.to.id] || 0;
+                    expenseFromPaid = purchase.paidByAmounts[debt.from.id] || 0;
+                    expenseToPaid = purchase.paidByAmounts[debt.to.id] || 0;
                   } else {
                     if (purchase.paidById === debt.from.id) {
-                      fromPaid = purchase.amount;
+                      expenseFromPaid = purchase.amount;
                     } else if (purchase.paidById === debt.to.id) {
-                      toPaid = purchase.amount;
+                      expenseToPaid = purchase.amount;
                     }
                   }
                   
@@ -194,8 +194,8 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   // Calculate net effect: what they paid minus their share
                   // Positive means they're owed money (overpaid)
                   // Negative means they owe money (underpaid)
-                  const fromNet = fromPaid - fromShare;
-                  const toNet = toPaid - toShare;
+                  const expenseFromNet = expenseFromPaid - fromShare;
+                  const expenseToNet = expenseToPaid - toShare;
                   
                   return (
                     <div key={purchase.id} className="border rounded-lg p-3 bg-muted/30">
@@ -228,15 +228,15 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                           <div className="font-medium truncate">{formatName(debt.from.name)}</div>
                           <div className="text-right">
                             <span className="text-muted-foreground">Paid: </span>
-                            <span className="font-medium">{formatCurrency(fromPaid)}</span>
+                            <span className="font-medium">{formatCurrency(expenseFromPaid)}</span>
                           </div>
                           <div className="text-right">
                             <span className="text-muted-foreground">Share: </span>
                             <span className="font-medium">{formatCurrency(fromShare)}</span>
                           </div>
                           <div className="text-right">
-                            <span className={fromNet > 0 ? "font-semibold text-green-600" : fromNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
-                              {fromNet > 0 ? `+${formatCurrency(fromNet)}` : formatCurrency(fromNet)}
+                            <span className={expenseFromNet > 0 ? "font-semibold text-green-600" : expenseFromNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
+                              {expenseFromNet > 0 ? `+${formatCurrency(expenseFromNet)}` : formatCurrency(expenseFromNet)}
                             </span>
                           </div>
                         </div>
@@ -246,15 +246,15 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                           <div className="font-medium truncate">{formatName(debt.to.name)}</div>
                           <div className="text-right">
                             <span className="text-muted-foreground">Paid: </span>
-                            <span className="font-medium">{formatCurrency(toPaid)}</span>
+                            <span className="font-medium">{formatCurrency(expenseToPaid)}</span>
                           </div>
                           <div className="text-right">
                             <span className="text-muted-foreground">Share: </span>
                             <span className="font-medium">{formatCurrency(toShare)}</span>
                           </div>
                           <div className="text-right">
-                            <span className={toNet > 0 ? "font-semibold text-green-600" : toNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
-                              {toNet > 0 ? `+${formatCurrency(toNet)}` : formatCurrency(toNet)}
+                            <span className={expenseToNet > 0 ? "font-semibold text-green-600" : expenseToNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
+                              {expenseToNet > 0 ? `+${formatCurrency(expenseToNet)}` : formatCurrency(expenseToNet)}
                             </span>
                           </div>
                         </div>

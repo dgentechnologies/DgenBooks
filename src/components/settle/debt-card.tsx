@@ -268,41 +268,39 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
 
           {/* Payment Summary */}
           <div>
-            <h3 className="font-semibold mb-3">Payment Summary</h3>
+            <h3 className="font-semibold mb-3">Settlement Calculation</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Based on expenses where each person's share exceeds what they paid
+            </p>
             <div className="space-y-2">
-              <div className="flex justify-between p-2 bg-muted/30 rounded">
-                <span className="text-sm">{formatName(debt.from.name)} paid:</span>
-                <span className="font-medium">{formatCurrency(calculations.fromPaidTotal)}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-muted/30 rounded">
-                <span className="text-sm">{formatName(debt.from.name)}'s share:</span>
-                <span className="font-medium">{formatCurrency(calculations.fromShareTotal)}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
-                <span className="text-sm font-medium">{formatName(debt.from.name)}'s net:</span>
-                <span className={fromNet > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+              {/* Show net amounts directly - simplified */}
+              <div className="flex justify-between p-3 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium">{formatName(debt.from.name)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {fromNet > 0 ? "Is owed" : fromNet < 0 ? "Owes" : "Settled"}
+                  </p>
+                </div>
+                <span className={fromNet > 0 ? "font-semibold text-green-600 text-lg" : fromNet < 0 ? "font-semibold text-red-600 text-lg" : "font-medium text-lg"}>
                   {fromNet > 0 ? `+${formatCurrency(fromNet)}` : formatCurrency(fromNet)}
+                </span>
+              </div>
+              
+              <div className="flex justify-between p-3 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium">{formatName(debt.to.name)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {toNet > 0 ? "Is owed" : toNet < 0 ? "Owes" : "Settled"}
+                  </p>
+                </div>
+                <span className={toNet > 0 ? "font-semibold text-green-600 text-lg" : toNet < 0 ? "font-semibold text-red-600 text-lg" : "font-medium text-lg"}>
+                  {toNet > 0 ? `+${formatCurrency(toNet)}` : formatCurrency(toNet)}
                 </span>
               </div>
             </div>
             
-            <div className="h-px bg-border my-3" />
-            
-            <div className="space-y-2">
-              <div className="flex justify-between p-2 bg-muted/30 rounded">
-                <span className="text-sm">{formatName(debt.to.name)} paid:</span>
-                <span className="font-medium">{formatCurrency(calculations.toPaidTotal)}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-muted/30 rounded">
-                <span className="text-sm">{formatName(debt.to.name)}'s share:</span>
-                <span className="font-medium">{formatCurrency(calculations.toShareTotal)}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
-                <span className="text-sm font-medium">{formatName(debt.to.name)}'s net:</span>
-                <span className={toNet > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  {toNet > 0 ? `+${formatCurrency(toNet)}` : formatCurrency(toNet)}
-                </span>
-              </div>
+            <div className="mt-3 p-2 bg-blue-500/5 rounded text-xs text-muted-foreground">
+              <p>💡 Net calculation: (What they paid - Their fair share) for all expenses</p>
             </div>
           </div>
 
@@ -341,25 +339,22 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           {/* Current User Summary (if user is involved) */}
           {user && (user.uid === debt.from.id || user.uid === debt.to.id) && (
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3">Your Summary</h3>
+              <h3 className="font-semibold mb-3">Your Position</h3>
               <div className="space-y-2">
-                <div className="flex justify-between p-2 bg-blue-500/10 rounded">
-                  <span className="text-sm">You paid:</span>
-                  <span className="font-medium">{formatCurrency(currentUserPaid)}</span>
-                </div>
-                <div className="flex justify-between p-2 bg-blue-500/10 rounded">
-                  <span className="text-sm">Your share:</span>
-                  <span className="font-medium">{formatCurrency(currentUserShare)}</span>
-                </div>
-                <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/30">
-                  <span className="text-sm font-medium">Your net:</span>
-                  <span className={currentUserNet > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                <div className="flex justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                  <div>
+                    <p className="text-sm font-medium">Your net position:</p>
+                    <p className="text-xs text-muted-foreground">
+                      {currentUserNet > 0 ? "You are owed" : currentUserNet < 0 ? "You owe" : "All settled"}
+                    </p>
+                  </div>
+                  <span className={currentUserNet > 0 ? "font-bold text-green-600 text-xl" : currentUserNet < 0 ? "font-bold text-red-600 text-xl" : "font-bold text-xl"}>
                     {currentUserNet > 0 ? `+${formatCurrency(currentUserNet)}` : formatCurrency(currentUserNet)}
                   </span>
                 </div>
                 {currentUserSettled > 0 && (
                   <div className="flex justify-between p-2 bg-green-500/10 rounded">
-                    <span className="text-sm">You already settled:</span>
+                    <span className="text-sm">Already settled:</span>
                     <span className="font-medium text-green-600">{formatCurrency(currentUserSettled)}</span>
                   </div>
                 )}

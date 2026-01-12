@@ -29,22 +29,14 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
 
-  // Get all purchases related to this debt (where either person paid and both are in splitWith)
+  // Get all purchases related to this debt (where both users are in splitWith)
   const relevantPurchases = useMemo(() => {
     return transactions.filter((t): t is Purchase => {
       if (t.type !== 'purchase') return false;
       
+      // Include all expenses where both users are involved in the split
       const involvesBothUsers = t.splitWith.includes(debt.from.id) && t.splitWith.includes(debt.to.id);
-      if (!involvesBothUsers) return false;
-      
-      // Check if either person paid
-      if (t.paymentType === 'multiple' && t.paidByAmounts) {
-        const fromPaid = (t.paidByAmounts[debt.from.id] || 0) > 0;
-        const toPaid = (t.paidByAmounts[debt.to.id] || 0) > 0;
-        return fromPaid || toPaid;
-      } else {
-        return t.paidById === debt.from.id || t.paidById === debt.to.id;
-      }
+      return involvesBothUsers;
     });
   }, [transactions, debt]);
 

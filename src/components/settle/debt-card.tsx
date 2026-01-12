@@ -163,41 +163,46 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           {relevantPurchases.length > 0 && (
             <div>
               <h3 className="font-semibold mb-3">Related Expenses</h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {relevantPurchases.map((purchase) => {
                   const CategoryIcon = getCategoryIcon(purchase.category);
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
-                  let paidByInfo = '';
+                  // Calculate what each person paid and their share
+                  let fromPaid = 0;
+                  let toPaid = 0;
+                  
                   if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
-                    const fromPaid = purchase.paidByAmounts[debt.from.id] || 0;
-                    const toPaid = purchase.paidByAmounts[debt.to.id] || 0;
-                    if (fromPaid > 0 && toPaid > 0) {
-                      paidByInfo = 'Both paid';
-                    } else if (fromPaid > 0) {
-                      paidByInfo = `Paid by ${formatName(debt.from.name)}`;
-                    } else if (toPaid > 0) {
-                      paidByInfo = `Paid by ${formatName(debt.to.name)}`;
-                    }
+                    fromPaid = purchase.paidByAmounts[debt.from.id] || 0;
+                    toPaid = purchase.paidByAmounts[debt.to.id] || 0;
                   } else {
                     if (purchase.paidById === debt.from.id) {
-                      paidByInfo = `Paid by ${formatName(debt.from.name)}`;
+                      fromPaid = purchase.amount;
                     } else if (purchase.paidById === debt.to.id) {
-                      paidByInfo = `Paid by ${formatName(debt.to.name)}`;
+                      toPaid = purchase.amount;
                     }
                   }
                   
+                  const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
+                  const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
+                  
+                  // Calculate net effect: what they paid minus their share
+                  // Positive means they're owed money (overpaid)
+                  // Negative means they owe money (underpaid)
+                  const fromNet = fromPaid - fromShare;
+                  const toNet = toPaid - toShare;
+                  
                   return (
-                    <div key={purchase.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-md">
-                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <div key={purchase.id} className="border rounded-lg p-3 bg-muted/30">
+                      {/* Expense Header */}
+                      <div className="flex items-start gap-2 mb-3">
                         <div className="rounded-full p-1.5 bg-accent/10 flex-shrink-0 mt-0.5">
                           <CategoryIcon className="h-3 w-3 text-accent" />
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{purchase.itemName}</p>
                           <p className="text-xs text-muted-foreground">{purchase.category}</p>
-                          <p className="text-xs text-muted-foreground">{paidByInfo}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {new Date(purchase.date).toLocaleDateString('en-IN', { 
                               month: 'short', 
                               day: 'numeric',
@@ -205,12 +210,49 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                             })}
                           </p>
                         </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-semibold text-sm">{formatCurrency(purchase.amount)}</p>
+                          <p className="text-xs text-muted-foreground">Total</p>
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-2">
-                        <p className="font-semibold text-sm">{formatCurrency(purchase.amount)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(sharePerPerson)}/person
-                        </p>
+                      
+                      {/* Per-Person Breakdown */}
+                      <div className="space-y-2 pt-2 border-t">
+                        {/* From User */}
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <div className="font-medium truncate">{formatName(debt.from.name)}</div>
+                          <div className="text-right">
+                            <span className="text-muted-foreground">Paid: </span>
+                            <span className="font-medium">{formatCurrency(fromPaid)}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-muted-foreground">Share: </span>
+                            <span className="font-medium">{formatCurrency(fromShare)}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className={fromNet > 0 ? "font-semibold text-green-600" : fromNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
+                              {fromNet > 0 ? `+${formatCurrency(fromNet)}` : formatCurrency(fromNet)}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* To User */}
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          <div className="font-medium truncate">{formatName(debt.to.name)}</div>
+                          <div className="text-right">
+                            <span className="text-muted-foreground">Paid: </span>
+                            <span className="font-medium">{formatCurrency(toPaid)}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-muted-foreground">Share: </span>
+                            <span className="font-medium">{formatCurrency(toShare)}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className={toNet > 0 ? "font-semibold text-green-600" : toNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
+                              {toNet > 0 ? `+${formatCurrency(toNet)}` : formatCurrency(toNet)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -224,20 +266,43 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             <h3 className="font-semibold mb-3">Payment Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between p-2 bg-muted/30 rounded">
-                <span className="text-sm">What {formatName(debt.from.name)} paid:</span>
+                <span className="text-sm">{formatName(debt.from.name)} paid:</span>
                 <span className="font-medium">{formatCurrency(calculations.fromPaidTotal)}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-muted/30 rounded">
-                <span className="text-sm">What {formatName(debt.to.name)} paid:</span>
-                <span className="font-medium">{formatCurrency(calculations.toPaidTotal)}</span>
               </div>
               <div className="flex justify-between p-2 bg-muted/30 rounded">
                 <span className="text-sm">{formatName(debt.from.name)}'s share:</span>
                 <span className="font-medium">{formatCurrency(calculations.fromShareTotal)}</span>
               </div>
+              <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                <span className="text-sm font-medium">{formatName(debt.from.name)}'s net:</span>
+                <span className={calculations.fromPaidTotal - calculations.fromShareTotal > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  {calculations.fromPaidTotal - calculations.fromShareTotal > 0 
+                    ? `+${formatCurrency(calculations.fromPaidTotal - calculations.fromShareTotal)}` 
+                    : formatCurrency(calculations.fromPaidTotal - calculations.fromShareTotal)
+                  }
+                </span>
+              </div>
+            </div>
+            
+            <div className="h-px bg-border my-3" />
+            
+            <div className="space-y-2">
+              <div className="flex justify-between p-2 bg-muted/30 rounded">
+                <span className="text-sm">{formatName(debt.to.name)} paid:</span>
+                <span className="font-medium">{formatCurrency(calculations.toPaidTotal)}</span>
+              </div>
               <div className="flex justify-between p-2 bg-muted/30 rounded">
                 <span className="text-sm">{formatName(debt.to.name)}'s share:</span>
                 <span className="font-medium">{formatCurrency(calculations.toShareTotal)}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                <span className="text-sm font-medium">{formatName(debt.to.name)}'s net:</span>
+                <span className={calculations.toPaidTotal - calculations.toShareTotal > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  {calculations.toPaidTotal - calculations.toShareTotal > 0 
+                    ? `+${formatCurrency(calculations.toPaidTotal - calculations.toShareTotal)}` 
+                    : formatCurrency(calculations.toPaidTotal - calculations.toShareTotal)
+                  }
+                </span>
               </div>
             </div>
           </div>
@@ -287,27 +352,39 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   <span className="text-sm">Your share:</span>
                   <span className="font-medium">{formatCurrency(currentUserShare)}</span>
                 </div>
-                <div className="flex justify-between p-2 bg-blue-500/10 rounded">
-                  <span className="text-sm">You already settled:</span>
-                  <span className="font-medium">{formatCurrency(currentUserSettled)}</span>
+                <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/30">
+                  <span className="text-sm font-medium">Your net:</span>
+                  <span className={currentUserPaid - currentUserShare > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                    {currentUserPaid - currentUserShare > 0 
+                      ? `+${formatCurrency(currentUserPaid - currentUserShare)}` 
+                      : formatCurrency(currentUserPaid - currentUserShare)
+                    }
+                  </span>
                 </div>
-                <div className="flex justify-between p-2 bg-blue-500/10 rounded">
-                  <span className="text-sm">Other person paid:</span>
-                  <span className="font-medium">{formatCurrency(otherUserPaid)}</span>
-                </div>
+                {currentUserSettled > 0 && (
+                  <div className="flex justify-between p-2 bg-green-500/10 rounded">
+                    <span className="text-sm">You already settled:</span>
+                    <span className="font-medium text-green-600">{formatCurrency(currentUserSettled)}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Final Total */}
           <div className="border-t pt-4">
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-              <span className="font-semibold">Final Amount Due:</span>
-              <span className="text-2xl font-bold text-primary">{formatCurrency(debt.amount)}</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
+                <span className="font-semibold">Outstanding Amount:</span>
+                <span className="text-2xl font-bold text-accent">{formatCurrency(debt.amount)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                {formatName(debt.from.name)} owes {formatName(debt.to.name)}
+              </p>
+              <p className="text-xs text-muted-foreground text-center">
+                (After all expenses and settlements)
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              After all expenses and settlements
-            </p>
           </div>
         </div>
       </DialogContent>

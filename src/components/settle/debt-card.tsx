@@ -119,6 +119,11 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
   const currentUserShare = isCurrentUserDebtor ? calculations.fromShareTotal : calculations.toShareTotal;
   const currentUserSettled = isCurrentUserDebtor ? calculations.settlementsFromTo : calculations.settlementsToFrom;
   const otherUserPaid = isCurrentUserDebtor ? calculations.toPaidTotal : calculations.fromPaidTotal;
+  
+  // Calculate net amounts
+  const fromNet = calculations.fromPaidTotal - calculations.fromShareTotal;
+  const toNet = calculations.toPaidTotal - calculations.toShareTotal;
+  const currentUserNet = currentUserPaid - currentUserShare;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -275,11 +280,8 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
               </div>
               <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
                 <span className="text-sm font-medium">{formatName(debt.from.name)}'s net:</span>
-                <span className={calculations.fromPaidTotal - calculations.fromShareTotal > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  {calculations.fromPaidTotal - calculations.fromShareTotal > 0 
-                    ? `+${formatCurrency(calculations.fromPaidTotal - calculations.fromShareTotal)}` 
-                    : formatCurrency(calculations.fromPaidTotal - calculations.fromShareTotal)
-                  }
+                <span className={fromNet > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  {fromNet > 0 ? `+${formatCurrency(fromNet)}` : formatCurrency(fromNet)}
                 </span>
               </div>
             </div>
@@ -297,11 +299,8 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
               </div>
               <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
                 <span className="text-sm font-medium">{formatName(debt.to.name)}'s net:</span>
-                <span className={calculations.toPaidTotal - calculations.toShareTotal > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                  {calculations.toPaidTotal - calculations.toShareTotal > 0 
-                    ? `+${formatCurrency(calculations.toPaidTotal - calculations.toShareTotal)}` 
-                    : formatCurrency(calculations.toPaidTotal - calculations.toShareTotal)
-                  }
+                <span className={toNet > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                  {toNet > 0 ? `+${formatCurrency(toNet)}` : formatCurrency(toNet)}
                 </span>
               </div>
             </div>
@@ -354,11 +353,8 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                 </div>
                 <div className="flex justify-between p-2 bg-blue-500/10 rounded border border-blue-500/30">
                   <span className="text-sm font-medium">Your net:</span>
-                  <span className={currentUserPaid - currentUserShare > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
-                    {currentUserPaid - currentUserShare > 0 
-                      ? `+${formatCurrency(currentUserPaid - currentUserShare)}` 
-                      : formatCurrency(currentUserPaid - currentUserShare)
-                    }
+                  <span className={currentUserNet > 0 ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+                    {currentUserNet > 0 ? `+${formatCurrency(currentUserNet)}` : formatCurrency(currentUserNet)}
                   </span>
                 </div>
                 {currentUserSettled > 0 && (

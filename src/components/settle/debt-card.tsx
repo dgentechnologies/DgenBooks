@@ -29,15 +29,23 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
 
-  // Get all purchases related to this debt (where both users are in splitWith)
+  // Get all purchases related to this debt
+  // Include expenses where:
+  // - The debtor (from) has a share/participated
+  // - OR the creditor (to) paid for it
+  // This gives complete context for the debt relationship
   const relevantPurchases = useMemo(() => {
     return transactions.filter((t): t is Purchase => {
       if (t.type !== 'purchase') return false;
       
-      // Include all expenses where both users are involved in the split
-      const involvesBothUsers = t.splitWith.includes(debt.from.id) && t.splitWith.includes(debt.to.id);
-      return involvesBothUsers;
-    });
+      const debtorParticipated = t.splitWith.includes(debt.from.id);
+      const creditorPaid = t.paymentType === 'multiple' 
+        ? (t.paidByAmounts && (t.paidByAmounts[debt.to.id] || 0) > 0)
+        : t.paidById === debt.to.id;
+      
+      // Include if debtor participated OR if creditor paid (to show full context)
+      return debtorParticipated || creditorPaid;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date, newest first
   }, [transactions, debt]);
 
   // Get all settlements between these two users
@@ -165,29 +173,52 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   const CategoryIcon = getCategoryIcon(purchase.category);
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
-                  // Calculate what each person paid and their share
+                  // Determine who paid for this expense
+                  let paidBy: string = '';
                   let expenseFromPaid = 0;
                   let expenseToPaid = 0;
                   
                   if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
                     expenseFromPaid = purchase.paidByAmounts[debt.from.id] || 0;
                     expenseToPaid = purchase.paidByAmounts[debt.to.id] || 0;
+                    
+                    if (expenseFromPaid > 0 && expenseToPaid > 0) {
+                      paidBy = `Paid by both (${formatName(debt.from.name)}: ${formatCurrency(expenseFromPaid)}, ${formatName(debt.to.name)}: ${formatCurrency(expenseToPaid)})`;
+                    } else if (expenseFromPaid > 0) {
+                      paidBy = `Paid by ${formatName(debt.from.name)}`;
+                    } else if (expenseToPaid > 0) {
+                      paidBy = `Paid by ${formatName(debt.to.name)}`;
+                    } else {
+                      // Paid by someone else
+                      const payerIds = Object.keys(purchase.paidByAmounts);
+                      paidBy = payerIds.length > 0 ? `Paid by others` : 'Unknown payer';
+                    }
                   } else {
                     if (purchase.paidById === debt.from.id) {
                       expenseFromPaid = purchase.amount;
+                      paidBy = `Paid by ${formatName(debt.from.name)}`;
                     } else if (purchase.paidById === debt.to.id) {
                       expenseToPaid = purchase.amount;
+                      paidBy = `Paid by ${formatName(debt.to.name)}`;
+                    } else {
+                      // Paid by someone else - find their name if possible
+                      paidBy = `Paid by others`;
                     }
                   }
                   
+                  // Calculate shares for both users
                   const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                   const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
                   
                   // Calculate net effect: what they paid minus their share
-                  // Positive means they're owed money (overpaid)
-                  // Negative means they owe money (underpaid)
                   const expenseFromNet = expenseFromPaid - fromShare;
                   const expenseToNet = expenseToPaid - toShare;
+                  
+                  // Determine if this expense is relevant to show
+                  const debtorHasShare = fromShare > 0;
+                  const showExpense = debtorHasShare || expenseFromPaid > 0 || expenseToPaid > 0;
+                  
+                  if (!showExpense) return null;
                   
                   return (
                     <div key={purchase.id} className="border rounded-lg p-3 bg-muted/30">
@@ -199,6 +230,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{purchase.itemName}</p>
                           <p className="text-xs text-muted-foreground">{purchase.category}</p>
+                          <p className="text-xs font-medium text-primary mt-1">{paidBy}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {new Date(purchase.date).toLocaleDateString('en-IN', { 
                               month: 'short', 
@@ -209,47 +241,39 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="font-semibold text-sm">{formatCurrency(purchase.amount)}</p>
-                          <p className="text-xs text-muted-foreground">Total</p>
+                          <p className="text-xs text-muted-foreground">Total Cost</p>
                         </div>
                       </div>
                       
-                      {/* Per-Person Breakdown */}
+                      {/* Per-Person Breakdown - Focus on Debtor's Share */}
                       <div className="space-y-2 pt-2 border-t">
-                        {/* From User */}
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <div className="font-medium truncate">{formatName(debt.from.name)}</div>
-                          <div className="text-right">
-                            <span className="text-muted-foreground">Paid: </span>
-                            <span className="font-medium">{formatCurrency(expenseFromPaid)}</span>
+                        {/* Debtor (From User) - Highlighted */}
+                        {debtorHasShare && (
+                          <div className="bg-red-500/5 rounded p-2 border border-red-500/20">
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div className="font-medium">{formatName(debt.from.name)}'s Share:</div>
+                              <div className="text-right font-semibold text-red-600">
+                                {formatCurrency(fromShare)}
+                              </div>
+                              <div className="text-right text-xs text-muted-foreground">
+                                {expenseFromPaid > 0 ? `(Paid ${formatCurrency(expenseFromPaid)})` : '(Paid ₹0)'}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-muted-foreground">Share: </span>
-                            <span className="font-medium">{formatCurrency(fromShare)}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className={expenseFromNet > 0 ? "font-semibold text-green-600" : expenseFromNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
-                              {expenseFromNet > 0 ? `+${formatCurrency(expenseFromNet)}` : formatCurrency(expenseFromNet)}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                         
-                        {/* To User */}
-                        <div className="grid grid-cols-4 gap-2 text-xs">
-                          <div className="font-medium truncate">{formatName(debt.to.name)}</div>
-                          <div className="text-right">
-                            <span className="text-muted-foreground">Paid: </span>
-                            <span className="font-medium">{formatCurrency(expenseToPaid)}</span>
+                        {/* Creditor (To User) - If involved */}
+                        {toShare > 0 && (
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="font-medium truncate">{formatName(debt.to.name)}'s Share:</div>
+                            <div className="text-right">
+                              {formatCurrency(toShare)}
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground">
+                              {expenseToPaid > 0 ? `(Paid ${formatCurrency(expenseToPaid)})` : '(Paid ₹0)'}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-muted-foreground">Share: </span>
-                            <span className="font-medium">{formatCurrency(toShare)}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className={expenseToNet > 0 ? "font-semibold text-green-600" : expenseToNet < 0 ? "font-semibold text-red-600" : "font-medium"}>
-                              {expenseToNet > 0 ? `+${formatCurrency(expenseToNet)}` : formatCurrency(expenseToNet)}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   );

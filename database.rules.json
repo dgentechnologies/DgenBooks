@@ -1,0 +1,72 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      ".indexOn": ["name"],
+      "$userId": {
+        ".read": "auth != null",
+        ".write": "$userId === auth.uid",
+        ".validate": "newData.hasChildren(['id', 'name', 'avatar'])",
+        "id": {
+          ".validate": "newData.val() === $userId"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        "avatar": {
+          ".validate": "newData.isString()"
+        },
+        "purchases": {
+          "$purchaseId": {
+            ".read": "$userId === auth.uid",
+            ".write": "$userId === auth.uid",
+            ".validate": "newData.hasChildren(['type', 'itemName', 'category', 'date', 'amount', 'paidById', 'splitWith'])",
+            "type": {
+              ".validate": "newData.val() === 'purchase'"
+            },
+            "paidById": {
+              ".validate": "newData.val() === $userId"
+            },
+            "itemName": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+            },
+            "category": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "date": {
+              ".validate": "newData.isString()"
+            },
+            "amount": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "splitWith": {
+              ".validate": "newData.hasChildren()"
+            }
+          }
+        },
+        "settlements": {
+          "$settlementId": {
+            ".read": "$userId === auth.uid",
+            ".write": "$userId === auth.uid",
+            ".validate": "newData.hasChildren(['type', 'fromId', 'toId', 'amount', 'date'])",
+            "type": {
+              ".validate": "newData.val() === 'settlement'"
+            },
+            "fromId": {
+              ".validate": "newData.val() === $userId"
+            },
+            "toId": {
+              ".validate": "newData.isString() && newData.val().length > 0"
+            },
+            "amount": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            },
+            "date": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    }
+  }
+}

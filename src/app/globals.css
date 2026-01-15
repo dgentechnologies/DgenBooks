@@ -1,0 +1,427 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Premium Dark Mode - Deep midnight blue gradient */
+    --background: 222 84% 5%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 84% 6%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Electric Blue primary - for logo "D" */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 12%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 12%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Cyan accent */
+    --accent: 189 94% 43%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 217 91% 60%;
+
+    --radius: 1.5rem;
+
+    /* Premium chart colors: Purple, Cyan, Green */
+    --chart-1: 271 81% 56%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 351 95% 71%;
+
+    --sidebar-background: 222 84% 5%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 222 47% 10%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 12%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  .dark {
+    /* Premium Dark Mode - Deep midnight blue gradient */
+    --background: 222 84% 5%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 84% 6%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Electric Blue primary - for logo "D" */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 12%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 12%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Cyan accent */
+    --accent: 189 94% 43%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
+    --ring: 217 91% 60%;
+
+    /* Premium chart colors: Purple, Cyan, Green */
+    --chart-1: 271 81% 56%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 43 96% 56%;
+    --chart-5: 351 95% 71%;
+
+    --sidebar-background: 222 84% 5%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 222 47% 10%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 12%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  /* Root-level mobile optimizations */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+    /* Mobile viewport height fix */
+    height: 100%;
+    height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  body {
+    @apply text-foreground custom-scrollbar;
+    background: linear-gradient(to bottom, rgb(15 23 42), rgb(2 6 23));
+    transition: background-color 0.3s ease;
+    position: relative;
+    /* Prevent overscroll bounce for app-like feel */
+    overscroll-behavior-y: contain;
+    /* Optimize mobile scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Mobile viewport height */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Ambient glow effect - subtle radial gradient blob */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -20%;
+    right: -10%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle, hsl(180 100% 42% / 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+    animation: ambient-float 20s ease-in-out infinite;
+  }
+  
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -20%;
+    left: -10%;
+    width: 50%;
+    height: 50%;
+    background: radial-gradient(circle, hsl(160 84% 39% / 0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+    animation: ambient-float-reverse 25s ease-in-out infinite;
+  }
+  
+  @keyframes ambient-float {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(-10%, 10%, 0) scale(1.1);
+    }
+  }
+  
+  @keyframes ambient-float-reverse {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(10%, -10%, 0) scale(1.05);
+    }
+  }
+  
+  .glassmorphic-card {
+    @apply bg-card/50 backdrop-blur-lg border;
+  }
+  
+  /* Mobile-specific touch optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    /* Increase touch target size on mobile */
+    button, a, input, select, textarea {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Remove focus outlines on touch devices */
+    *:focus {
+      outline: none;
+    }
+    
+    /* Better tap feedback */
+    button:active, a:active {
+      transform: scale(0.98);
+      transition: transform 0.1s ease;
+    }
+  }
+  
+  /* Smooth scrolling for in-page navigation */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+@layer components {
+  /* Premium scrollbar styling - applied to main content areas */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.3) transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+
+  /* Premium focus states */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    transition: outline-offset 0.2s ease;
+  }
+
+  /* Smooth transitions for interactive elements */
+  button, a, input, select, textarea {
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* Premium card hover effect */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px hsl(var(--primary) / 0.1);
+  }
+
+  /* Gradient overlay for premium feel */
+  .gradient-overlay {
+    position: relative;
+  }
+
+  .gradient-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.05), hsl(var(--accent) / 0.05));
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* Animation utilities */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s ease-out;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Mobile-optimized utilities */
+  .mobile-safe-area-top {
+    padding-top: max(env(safe-area-inset-top), 1rem);
+  }
+  
+  .mobile-safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+  
+  .mobile-safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Pull-to-refresh indicator styling */
+  .ptr-element {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, hsl(var(--background)), transparent);
+    opacity: 0;
+    transform: translateY(-100%);
+    transition: all 0.3s ease;
+  }
+  
+  /* App-like bottom navigation */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: hsl(var(--background) / 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid hsl(var(--border));
+    z-index: 50;
+  }
+  
+  /* Swipe gesture hints */
+  .swipeable {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .swipeable:active {
+    cursor: grabbing;
+  }
+  
+  /* Mobile-optimized input fields */
+  @media (max-width: 768px) {
+    input, textarea, select {
+      font-size: 16px; /* Prevent zoom on iOS */
+      border-radius: 0.5rem;
+    }
+    
+    /* Optimize modal/dialog for mobile */
+    [role="dialog"], [role="alertdialog"] {
+      max-width: calc(100vw - 2rem);
+      max-height: calc(100vh - 4rem);
+      margin: auto;
+    }
+  }
+  
+  /* Loading states with better mobile feedback */
+  .loading-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted) / 0.8) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  
+  /* Native-like scrollable containers */
+  .native-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  
+  /* Hide scrollbar while maintaining scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+}

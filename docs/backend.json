@@ -1,0 +1,177 @@
+{
+  "entities": {
+    "Purchase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Purchase",
+      "type": "object",
+      "description": "Represents a purchase record in the DgenBooks application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Purchase entity."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Name of the item purchased."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the purchase.",
+          "format": "date-time"
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the item purchased."
+        },
+        "paidById": {
+          "type": "string",
+          "description": "Reference to the User who paid for the purchase. (Relationship: User 1:N Purchase)"
+        },
+        "splitDetails": {
+          "type": "array",
+          "description": "Details of how the purchase was split among users. Stores the userId and amount each user owes.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "itemName",
+        "date",
+        "price",
+        "paidById",
+        "splitDetails"
+      ]
+    },
+    "Settlement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Settlement",
+      "type": "object",
+      "description": "Represents a settlement record where a debt is marked as paid.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Settlement entity."
+        },
+        "fromUserId": {
+          "type": "string",
+          "description": "Reference to the User who made the payment. (Relationship: User 1:N Settlement)"
+        },
+        "toUserId": {
+          "type": "string",
+          "description": "Reference to the User who received the payment. (Relationship: User 1:N Settlement)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount paid in the settlement."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the settlement.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "fromUserId",
+        "toUserId",
+        "amount",
+        "date"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the DgenBooks application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Accessible only to the authenticated user with the matching userId.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user. Must match the authenticated user's UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/purchases/{purchaseId}",
+        "definition": {
+          "entityName": "Purchase",
+          "schema": {
+            "$ref": "#/backend/entities/Purchase"
+          },
+          "description": "Stores purchase records for each user. Includes denormalized 'paidById' field, which must match the userId of the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who made the purchase. Must match the 'paidById' field in the document."
+            },
+            {
+              "name": "purchaseId",
+              "description": "The unique identifier of the purchase record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/settlements/{settlementId}",
+        "definition": {
+          "entityName": "Settlement",
+          "schema": {
+            "$ref": "#/backend/entities/Settlement"
+          },
+          "description": "Stores settlement records for each user. Includes denormalized 'fromUserId' field, which must match the userId of the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who initiated the settlement. Must match the 'fromUserId' field in the document."
+            },
+            {
+              "name": "settlementId",
+              "description": "The unique identifier of the settlement record."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. We are implementing denormalization strategies to eliminate `get()` calls in security rules and maintain atomic operations.\n\n*   **Users Collection (`/users/{userId}`):** Stores user profiles. This collection uses path-based ownership. Each user document is accessible only to the authenticated user with the matching `userId`. This ensures private user data and simplifies security rules.\n\n*   **Purchases Collection (`/users/{userId}/purchases/{purchaseId}`):** Stores purchase records for each user. This collection continues the hierarchical path-based ownership from the `users` collection. To achieve authorization independence, each purchase document includes a denormalized `paidById` field, which duplicates the `userId` from the path. This allows security rules to verify ownership without needing to `get()` the user document.\n\n*   **Settlements Collection (`/users/{userId}/settlements/{settlementId}`):** Stores settlement records for each user. Similar to `purchases`, this collection extends the path-based ownership. Each settlement includes `fromUserId` and `toUserId` fields to denote the payer and receiver. The `fromUserId` must match the `userId` of the path, denormalizing the path. This ensures the user can only create settlements that they initiated.\n\nThis structure promotes Authorization Independence by denormalizing the `paidById`, `fromUserId`, and `toUserId` fields. This eliminates the need for `get()` calls in security rules, enabling atomic operations and easier debugging. Segregation via path-based ownership simplifies the rules, while the consistent use of naming conventions (e.g., `userId`, `purchaseId`, `settlementId`) enhances Clarity of Intent and Predictable Schema. The chosen structure facilitates QAPs, because we don't need to filter based on other user's data. Instead we rely on path based access, so `list` is not an issue. The denormalization ensures atomicity of read/write operations."
+  }
+}

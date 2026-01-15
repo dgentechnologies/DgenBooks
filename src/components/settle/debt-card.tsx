@@ -23,6 +23,51 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useUser } from "@/firebase"
 
+// Helper function to get payment amounts for a purchase
+function getPaymentAmounts(purchase: Purchase, debtorId: string, creditorId: string) {
+  let expenseFromPaid = 0;
+  let expenseToPaid = 0;
+  
+  if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
+    expenseFromPaid = purchase.paidByAmounts[debtorId] || 0;
+    expenseToPaid = purchase.paidByAmounts[creditorId] || 0;
+  } else {
+    if (purchase.paidById === debtorId) {
+      expenseFromPaid = purchase.amount;
+    } else if (purchase.paidById === creditorId) {
+      expenseToPaid = purchase.amount;
+    }
+  }
+  
+  return { expenseFromPaid, expenseToPaid };
+}
+
+// Helper function to determine transaction type
+function getTransactionType(
+  expenseFromPaid: number,
+  expenseToPaid: number,
+  fromShare: number,
+  toShare: number
+): 'debit' | 'credit' | 'mixed' | 'third-party' {
+  const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
+  const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
+  
+  // If neither user paid (third party), mark as third-party
+  if (expenseFromPaid === 0 && expenseToPaid === 0) {
+    return 'third-party';
+  }
+  
+  if (creditorPaidForDebtor && !debtorPaidForCreditor) {
+    return 'debit'; // Red: Creditor paid, Debtor owes
+  } else if (debtorPaidForCreditor && !creditorPaidForDebtor) {
+    return 'credit'; // Green: Debtor paid, Creditor owes
+  } else if (creditorPaidForDebtor && debtorPaidForCreditor) {
+    return 'mixed'; // Blue: Both paid
+  }
+  
+  return 'third-party';
+}
+
 
 // View debt details dialog component
 function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Transaction[] }) {
@@ -184,49 +229,16 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   const CategoryIcon = getCategoryIcon(purchase.category);
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
-                  // Determine who paid for this expense
-                  let expenseFromPaid = 0;
-                  let expenseToPaid = 0;
-                  
-                  if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
-                    expenseFromPaid = purchase.paidByAmounts[debt.from.id] || 0;
-                    expenseToPaid = purchase.paidByAmounts[debt.to.id] || 0;
-                  } else {
-                    if (purchase.paidById === debt.from.id) {
-                      expenseFromPaid = purchase.amount;
-                    } else if (purchase.paidById === debt.to.id) {
-                      expenseToPaid = purchase.amount;
-                    }
-                  }
-                  
-                  // Calculate shares for both users
+                  // Calculate payment amounts and shares
+                  const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(purchase, debt.from.id, debt.to.id);
                   const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                   const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
                   
-                  // Helper function: Determine transaction type
-                  const getTransactionType = () => {
-                    const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
-                    const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
-                    
-                    // If neither user paid (third party), skip this transaction
-                    if (expenseFromPaid === 0 && expenseToPaid === 0) {
-                      return 'third-party';
-                    }
-                    
-                    if (creditorPaidForDebtor && !debtorPaidForCreditor) {
-                      return 'debit'; // Red: Creditor paid, Debtor owes
-                    } else if (debtorPaidForCreditor && !creditorPaidForDebtor) {
-                      return 'credit'; // Green: Debtor paid, Creditor owes
-                    } else if (creditorPaidForDebtor && debtorPaidForCreditor) {
-                      return 'mixed'; // Blue: Both paid
-                    }
-                    return 'unknown';
-                  };
+                  // Determine transaction type using helper
+                  const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
                   
-                  const transactionType = getTransactionType();
-                  
-                  // Skip third-party transactions (shouldn't appear but handle gracefully)
-                  if (transactionType === 'third-party' || transactionType === 'unknown') {
+                  // Skip third-party transactions
+                  if (transactionType === 'third-party') {
                     return null;
                   }
                   
@@ -340,22 +352,15 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                       const fromShare = p.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                       const toShare = p.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
                       
-                      const expenseFromPaid = p.paymentType === 'multiple' && p.paidByAmounts
-                        ? (p.paidByAmounts[debt.from.id] || 0)
-                        : (p.paidById === debt.from.id ? p.amount : 0);
-                      const expenseToPaid = p.paymentType === 'multiple' && p.paidByAmounts
-                        ? (p.paidByAmounts[debt.to.id] || 0)
-                        : (p.paidById === debt.to.id ? p.amount : 0);
+                      const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debt.from.id, debt.to.id);
+                      const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
                       
-                      const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
-                      const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
-                      
-                      // Only count pure debit transactions (creditor paid, debtor owes, debtor didn't pay)
-                      if (creditorPaidForDebtor && !debtorPaidForCreditor) {
+                      // Pure debit transactions
+                      if (transactionType === 'debit') {
                         return sum + fromShare;
                       }
-                      // For mixed transactions where both paid, add net positive effect
-                      if (creditorPaidForDebtor && debtorPaidForCreditor) {
+                      // For mixed transactions, add net positive effect
+                      if (transactionType === 'mixed') {
                         const netEffect = fromShare - toShare;
                         if (netEffect > 0) {
                           return sum + netEffect;
@@ -375,22 +380,15 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                       const fromShare = p.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                       const toShare = p.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
                       
-                      const expenseFromPaid = p.paymentType === 'multiple' && p.paidByAmounts
-                        ? (p.paidByAmounts[debt.from.id] || 0)
-                        : (p.paidById === debt.from.id ? p.amount : 0);
-                      const expenseToPaid = p.paymentType === 'multiple' && p.paidByAmounts
-                        ? (p.paidByAmounts[debt.to.id] || 0)
-                        : (p.paidById === debt.to.id ? p.amount : 0);
+                      const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debt.from.id, debt.to.id);
+                      const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
                       
-                      const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
-                      const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
-                      
-                      // Only count pure credit transactions (debtor paid, creditor owes, creditor didn't pay)
-                      if (debtorPaidForCreditor && !creditorPaidForDebtor) {
+                      // Pure credit transactions
+                      if (transactionType === 'credit') {
                         return sum + toShare;
                       }
-                      // For mixed transactions where both paid, add net negative effect (as positive credit)
-                      if (creditorPaidForDebtor && debtorPaidForCreditor) {
+                      // For mixed transactions, add net negative effect (as positive credit)
+                      if (transactionType === 'mixed') {
                         const netEffect = fromShare - toShare;
                         if (netEffect < 0) {
                           return sum + Math.abs(netEffect);

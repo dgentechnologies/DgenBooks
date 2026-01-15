@@ -203,29 +203,43 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                   const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
                   
-                  // Determine if this is a Debit (Red) or Credit (Green) entry
-                  // Type A (Red/Debit): Creditor paid, Debtor owes → increases debt
-                  // Type B (Green/Credit): Debtor paid, Creditor owes → decreases debt
-                  const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
-                  const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
+                  // Helper function: Determine transaction type
+                  const getTransactionType = () => {
+                    const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
+                    const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
+                    
+                    // If neither user paid (third party), skip this transaction
+                    if (expenseFromPaid === 0 && expenseToPaid === 0) {
+                      return 'third-party';
+                    }
+                    
+                    if (creditorPaidForDebtor && !debtorPaidForCreditor) {
+                      return 'debit'; // Red: Creditor paid, Debtor owes
+                    } else if (debtorPaidForCreditor && !creditorPaidForDebtor) {
+                      return 'credit'; // Green: Debtor paid, Creditor owes
+                    } else if (creditorPaidForDebtor && debtorPaidForCreditor) {
+                      return 'mixed'; // Blue: Both paid
+                    }
+                    return 'unknown';
+                  };
                   
-                  // Determine the entry type
-                  const isDebit = creditorPaidForDebtor && !debtorPaidForCreditor;
-                  const isCredit = debtorPaidForCreditor && !creditorPaidForDebtor;
+                  const transactionType = getTransactionType();
                   
-                  // For entries where both paid, we show it as mixed
-                  const isMixed = creditorPaidForDebtor && debtorPaidForCreditor;
+                  // Skip third-party transactions (shouldn't appear but handle gracefully)
+                  if (transactionType === 'third-party' || transactionType === 'unknown') {
+                    return null;
+                  }
                   
-                  // Determine display properties
+                  // Determine display properties based on transaction type
                   let bgColor, borderColor, textColor, label, shareAmount;
-                  if (isDebit) {
+                  if (transactionType === 'debit') {
                     // Red entry: Debt increases
                     bgColor = 'bg-red-500/5';
                     borderColor = 'border-red-500/20';
                     textColor = 'text-red-600';
                     label = `Paid by ${formatName(debt.to.name)}`;
                     shareAmount = fromShare; // Debtor's share
-                  } else if (isCredit) {
+                  } else if (transactionType === 'credit') {
                     // Green entry: Debt decreases
                     bgColor = 'bg-green-500/5';
                     borderColor = 'border-green-500/20';
@@ -233,12 +247,12 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                     label = `Paid by ${formatName(debt.from.name)}`;
                     shareAmount = toShare; // Creditor's share (reduces debt)
                   } else {
-                    // Mixed: Both paid
+                    // Mixed: Both paid - show net effect
                     bgColor = 'bg-blue-500/5';
                     borderColor = 'border-blue-500/20';
                     textColor = 'text-blue-600';
                     label = `Paid by both`;
-                    shareAmount = fromShare; // Net effect on debtor
+                    shareAmount = fromShare - toShare; // Net effect on debt (positive increases, negative decreases)
                   }
                   
                   return (
@@ -271,17 +285,17 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         <div className={`${bgColor} rounded p-2 border ${borderColor}`}>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div className="font-medium">
-                              {isDebit && `${formatName(debt.from.name)}'s Share:`}
-                              {isCredit && `${formatName(debt.to.name)}'s Share:`}
-                              {isMixed && `Net Impact:`}
+                              {transactionType === 'debit' && `${formatName(debt.from.name)}'s Share:`}
+                              {transactionType === 'credit' && `${formatName(debt.to.name)}'s Share:`}
+                              {transactionType === 'mixed' && `Net Impact on Debt:`}
                             </div>
                             <div className={`text-right font-semibold ${textColor}`}>
-                              {isDebit && `+${formatCurrency(shareAmount)}`}
-                              {isCredit && `-${formatCurrency(shareAmount)}`}
-                              {isMixed && `${formatCurrency(shareAmount)}`}
+                              {transactionType === 'debit' && `+${formatCurrency(shareAmount)}`}
+                              {transactionType === 'credit' && `-${formatCurrency(shareAmount)}`}
+                              {transactionType === 'mixed' && (shareAmount >= 0 ? `+${formatCurrency(shareAmount)}` : `-${formatCurrency(Math.abs(shareAmount))}`)}
                             </div>
                           </div>
-                          {isMixed && (
+                          {transactionType === 'mixed' && (
                             <div className="mt-2 pt-2 border-t border-dashed border-muted-foreground/20 text-xs text-muted-foreground">
                               <div className="flex justify-between">
                                 <span>{formatName(debt.from.name)} paid:</span>
@@ -290,6 +304,14 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                               <div className="flex justify-between">
                                 <span>{formatName(debt.to.name)} paid:</span>
                                 <span>{formatCurrency(expenseToPaid)}</span>
+                              </div>
+                              <div className="flex justify-between mt-1 pt-1 border-t border-dashed">
+                                <span>{formatName(debt.from.name)}'s share:</span>
+                                <span>{formatCurrency(fromShare)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{formatName(debt.to.name)}'s share:</span>
+                                <span>{formatCurrency(toShare)}</span>
                               </div>
                             </div>
                           )}
@@ -316,15 +338,28 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                     relevantPurchases.reduce((sum, p) => {
                       const sharePerPerson = p.amount / p.splitWith.length;
                       const fromShare = p.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
-                      const expenseToPaid = p.paymentType === 'multiple' && p.paidByAmounts
-                        ? (p.paidByAmounts[debt.to.id] || 0)
-                        : (p.paidById === debt.to.id ? p.amount : 0);
+                      const toShare = p.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
+                      
                       const expenseFromPaid = p.paymentType === 'multiple' && p.paidByAmounts
                         ? (p.paidByAmounts[debt.from.id] || 0)
                         : (p.paidById === debt.from.id ? p.amount : 0);
-                      // Only count as debt if creditor paid and debtor owes
-                      if (expenseToPaid > 0 && fromShare > 0 && !(expenseFromPaid > 0)) {
+                      const expenseToPaid = p.paymentType === 'multiple' && p.paidByAmounts
+                        ? (p.paidByAmounts[debt.to.id] || 0)
+                        : (p.paidById === debt.to.id ? p.amount : 0);
+                      
+                      const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
+                      const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
+                      
+                      // Only count pure debit transactions (creditor paid, debtor owes, debtor didn't pay)
+                      if (creditorPaidForDebtor && !debtorPaidForCreditor) {
                         return sum + fromShare;
+                      }
+                      // For mixed transactions where both paid, add net positive effect
+                      if (creditorPaidForDebtor && debtorPaidForCreditor) {
+                        const netEffect = fromShare - toShare;
+                        if (netEffect > 0) {
+                          return sum + netEffect;
+                        }
                       }
                       return sum;
                     }, 0)
@@ -337,16 +372,29 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   -{formatCurrency(
                     relevantPurchases.reduce((sum, p) => {
                       const sharePerPerson = p.amount / p.splitWith.length;
+                      const fromShare = p.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                       const toShare = p.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
+                      
                       const expenseFromPaid = p.paymentType === 'multiple' && p.paidByAmounts
                         ? (p.paidByAmounts[debt.from.id] || 0)
                         : (p.paidById === debt.from.id ? p.amount : 0);
                       const expenseToPaid = p.paymentType === 'multiple' && p.paidByAmounts
                         ? (p.paidByAmounts[debt.to.id] || 0)
                         : (p.paidById === debt.to.id ? p.amount : 0);
-                      // Only count as credit if debtor paid and creditor owes
-                      if (expenseFromPaid > 0 && toShare > 0 && !(expenseToPaid > 0)) {
+                      
+                      const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
+                      const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
+                      
+                      // Only count pure credit transactions (debtor paid, creditor owes, creditor didn't pay)
+                      if (debtorPaidForCreditor && !creditorPaidForDebtor) {
                         return sum + toShare;
+                      }
+                      // For mixed transactions where both paid, add net negative effect (as positive credit)
+                      if (creditorPaidForDebtor && debtorPaidForCreditor) {
+                        const netEffect = fromShare - toShare;
+                        if (netEffect < 0) {
+                          return sum + Math.abs(netEffect);
+                        }
                       }
                       return sum;
                     }, 0)

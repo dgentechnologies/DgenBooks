@@ -3,7 +3,11 @@
 import { ColumnDef } from "@tanstack/react-table"
 import type { Transaction, User, Purchase, Settlement } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
+<<<<<<< HEAD
 import { ArrowUpDown, Pencil, Trash2 } from "lucide-react"
+=======
+import { ArrowUpDown, Pencil, Trash2, Eye } from "lucide-react"
+>>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -24,7 +28,11 @@ import { deletePurchase } from "@/lib/db/purchases"
 import { deleteSettlement } from "@/lib/db/settlements"
 import { useFirestore, useUser } from "@/firebase"
 import { toast } from "@/lib/toast"
+<<<<<<< HEAD
 import { useState } from "react"
+=======
+import { useState, useMemo } from "react"
+>>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 import { getCategoryIcon } from "@/lib/category-icons"
 import { formatName, formatCurrency } from "@/lib/format"
 
@@ -136,6 +144,223 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
   );
 }
 
+<<<<<<< HEAD
+=======
+// View expense details dialog component
+function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; users: User[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const getUser = (id: string): User | undefined => users.find(u => u.id === id);
+
+  // Calculate per-head cost
+  const splitWithLength = transaction.splitWith?.length || 0;
+  const perHeadCost = useMemo(() => {
+    return transaction.type === 'purchase' && splitWithLength > 0
+      ? transaction.amount / splitWithLength
+      : 0;
+  }, [transaction.type, transaction.amount, splitWithLength]);
+
+  if (transaction.type !== 'purchase') {
+    // For settlements, show minimal details
+    const fromUser = getUser(transaction.fromId);
+    const toUser = getUser(transaction.toId);
+    
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">View settlement details</span>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl">Settlement Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">From</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {fromUser && (
+                    <>
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={fromUser.avatar} />
+                        <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{formatName(fromUser.name)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">To</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {toUser && (
+                    <>
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={toUser.avatar} />
+                        <AvatarFallback>{toUser.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{formatName(toUser.name)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Amount</p>
+              <p className="text-2xl font-bold text-primary mt-1">{formatCurrency(transaction.amount)}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Date</p>
+              <p className="font-medium mt-1">{new Date(transaction.date).toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // For purchases, show full details
+  const paidByUser = getUser(transaction.paidById);
+  const CategoryIcon = getCategoryIcon(transaction.category);
+  
+  // Get payers information for multiple payment scenario
+  const payers = useMemo(() => {
+    if (transaction.paymentType === 'multiple' && transaction.paidByAmounts) {
+      return Object.entries(transaction.paidByAmounts)
+        .filter(([_, amount]) => amount > 0)
+        .map(([userId, amount]) => {
+          const user = getUser(userId);
+          return user ? { user, amount } : null;
+        })
+        .filter((payer): payer is { user: User; amount: number } => payer !== null);
+    }
+    return [];
+  }, [transaction.paymentType, transaction.paidByAmounts, users]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Eye className="h-4 w-4" />
+          <span className="sr-only">View expense details</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-headline text-xl">Expense Details</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Item Name and Category */}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Item</p>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="rounded-full p-1.5 bg-accent/10 flex-shrink-0">
+                <CategoryIcon className="h-4 w-4 text-accent" />
+              </div>
+              <div>
+                <p className="font-semibold">{transaction.itemName}</p>
+                <p className="text-sm text-muted-foreground">{transaction.category}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Amount */}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+            <p className="text-2xl font-bold text-primary mt-1">{formatCurrency(transaction.amount)}</p>
+          </div>
+
+          {/* Date */}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Date</p>
+            <p className="font-medium mt-1">{new Date(transaction.date).toLocaleDateString('en-IN', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}</p>
+          </div>
+
+          {/* Paid By */}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Paid By</p>
+            {transaction.paymentType === 'multiple' && payers.length > 0 ? (
+              <div className="space-y-2 mt-1">
+                {payers.map(({ user, amount }) => {
+                  const { id, avatar, name } = user;
+                  return (
+                    <div key={id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={avatar} />
+                          <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{formatName(name)}</span>
+                      </div>
+                      <span className="font-semibold">{formatCurrency(amount)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mt-1">
+                {paidByUser && (
+                  <>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={paidByUser.avatar} />
+                      <AvatarFallback>{paidByUser.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{formatName(paidByUser.name)}</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Split With */}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Split With ({transaction.splitWith?.length || 0} members)</p>
+            <div className="space-y-2 mt-1">
+              {transaction.splitWith?.map(userId => {
+                const user = getUser(userId);
+                if (!user) return null;
+                return (
+                  <div key={userId} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{formatName(user.name)}</span>
+                    </div>
+                    <span className="text-sm font-medium text-muted-foreground">{formatCurrency(perHeadCost)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Per Head Cost Summary */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Cost Per Person</p>
+              <p className="text-xl font-bold text-primary">{formatCurrency(perHeadCost)}</p>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+>>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 
 export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
@@ -290,6 +515,17 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     }
   },
   {
+<<<<<<< HEAD
+=======
+    id: "view",
+    header: "View",
+    cell: ({ row }) => {
+      const transaction = row.original;
+      return <ViewExpenseDialog transaction={transaction} users={users} />;
+    },
+  },
+  {
+>>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {

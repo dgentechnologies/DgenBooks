@@ -81,11 +81,7 @@ export default function SettleUpPage() {
               className="animate-slide-in-right"
               style={{animationDelay: `${index * 0.1}s`}}
             >
-<<<<<<< HEAD
-              <DebtCard debt={debt} onSettle={handleSettle} />
-=======
               <DebtCard debt={debt} onSettle={handleSettle} transactions={transactions} />
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
             </div>
           ))}
         </div>

@@ -1,15 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
-import { ArrowRight, Handshake } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switcher1 } from "@/components/ui/switcher1";
-import { useState } from "react";
-import type { Debt } from "@/lib/types";
-import { formatName, formatCurrency } from "@/lib/format";
-=======
 import { ArrowRight, Handshake, Eye, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +9,6 @@ import { useState, useMemo } from "react";
 import type { Debt, Transaction, Purchase } from "@/lib/types";
 import { formatName, formatCurrency } from "@/lib/format";
 import { getCategoryIcon } from "@/lib/category-icons";
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,8 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-<<<<<<< HEAD
-=======
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useUser } from "@/firebase"
 
@@ -43,20 +31,23 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
 
   // Get all purchases related to this debt
   // Include expenses where:
-  // - The debtor (from) has a share/participated
-  // - OR the creditor (to) paid for it
-  // This gives complete context for the debt relationship
+  // - The creditor (to) paid for it AND the debtor (from) participated
+  // This shows only expenses that contribute to the debt between these two users
   const relevantPurchases = useMemo(() => {
     return transactions.filter((t): t is Purchase => {
       if (t.type !== 'purchase') return false;
       
+      // Check if debtor participated in the expense
       const debtorParticipated = t.splitWith.includes(debt.from.id);
+      if (!debtorParticipated) return false;
+      
+      // Check if creditor paid for the expense
       const creditorPaid = t.paymentType === 'multiple' 
-        ? (t.paidByAmounts && (t.paidByAmounts[debt.to.id] || 0) > 0)
+        ? !!(t.paidByAmounts && t.paidByAmounts[debt.to.id] && t.paidByAmounts[debt.to.id] > 0)
         : t.paidById === debt.to.id;
       
-      // Include if debtor participated OR if creditor paid (to show full context)
-      return debtorParticipated || creditorPaid;
+      // Include only if BOTH conditions are met: creditor paid AND debtor participated
+      return creditorPaid;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date, newest first
   }, [transactions, debt]);
 
@@ -147,7 +138,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
       </DialogTrigger>
       <DialogContent className="w-[95vw] max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-headline text-xl">Debt Breakdown</DialogTitle>
+          <DialogTitle className="font-headline text-xl">Settlement Breakdown</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
@@ -179,7 +170,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           {/* Expenses Contributing to Debt */}
           {relevantPurchases.length > 0 && (
             <div>
-              <h3 className="font-semibold mb-3">Related Expenses</h3>
+              <h3 className="font-semibold mb-3">Expenses Contributing to This Debt</h3>
               <div className="space-y-3">
                 {relevantPurchases.map((purchase) => {
                   const CategoryIcon = getCategoryIcon(purchase.category);
@@ -222,16 +213,6 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
                   const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
                   
-                  // Calculate net effect: what they paid minus their share
-                  const expenseFromNet = expenseFromPaid - fromShare;
-                  const expenseToNet = expenseToPaid - toShare;
-                  
-                  // Determine if this expense is relevant to show
-                  const debtorHasShare = fromShare > 0;
-                  const showExpense = debtorHasShare || expenseFromPaid > 0 || expenseToPaid > 0;
-                  
-                  if (!showExpense) return null;
-                  
                   return (
                     <div key={purchase.id} className="border rounded-lg p-3 bg-muted/30">
                       {/* Expense Header */}
@@ -257,35 +238,16 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         </div>
                       </div>
                       
-                      {/* Per-Person Breakdown - Focus on Debtor's Share */}
-                      <div className="space-y-2 pt-2 border-t">
-                        {/* Debtor (From User) - Highlighted */}
-                        {debtorHasShare && (
-                          <div className="bg-red-500/5 rounded p-2 border border-red-500/20">
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              <div className="font-medium">{formatName(debt.from.name)}'s Share:</div>
-                              <div className="text-right font-semibold text-red-600">
-                                {formatCurrency(fromShare)}
-                              </div>
-                              <div className="text-right text-xs text-muted-foreground">
-                                {expenseFromPaid > 0 ? `(Paid ${formatCurrency(expenseFromPaid)})` : '(Paid ₹0)'}
-                              </div>
+                      {/* Debtor's Share - Highlighted */}
+                      <div className="pt-2 border-t">
+                        <div className="bg-red-500/5 rounded p-2 border border-red-500/20">
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="font-medium">{formatName(debt.from.name)}'s Share:</div>
+                            <div className="text-right font-semibold text-red-600">
+                              {formatCurrency(fromShare)}
                             </div>
                           </div>
-                        )}
-                        
-                        {/* Creditor (To User) - If involved */}
-                        {toShare > 0 && (
-                          <div className="grid grid-cols-3 gap-2 text-xs">
-                            <div className="font-medium truncate">{formatName(debt.to.name)}'s Share:</div>
-                            <div className="text-right">
-                              {formatCurrency(toShare)}
-                            </div>
-                            <div className="text-right text-xs text-muted-foreground">
-                              {expenseToPaid > 0 ? `(Paid ${formatCurrency(expenseToPaid)})` : '(Paid ₹0)'}
-                            </div>
-                          </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -294,11 +256,11 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             </div>
           )}
 
-          {/* Settlement Calculation - Based on System Calculation */}
+          {/* Settlement Calculation */}
           <div>
-            <h3 className="font-semibold mb-3">Pairwise Debt Calculation</h3>
+            <h3 className="font-semibold mb-3">Debt Calculation</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Net debt between {formatName(debt.from.name)} and {formatName(debt.to.name)} only
+              Net debt between {formatName(debt.from.name)} and {formatName(debt.to.name)}
             </p>
             <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
               <div className="flex items-center justify-between">
@@ -402,35 +364,24 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
     </Dialog>
   );
 }
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 
 
 interface DebtCardProps {
   debt: Debt;
   onSettle: (debt: Debt, customAmount?: number) => void;
-<<<<<<< HEAD
-}
-
-export function DebtCard({ debt, onSettle }: DebtCardProps) {
-  const { from, to, amount } = debt;
-=======
   transactions: Transaction[];
 }
 
 export function DebtCard({ debt, onSettle, transactions }: DebtCardProps) {
   const { from, to, amount } = debt;
   const { user } = useUser();
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
   const [customAmount, setCustomAmount] = useState<string>(amount.toFixed(2));
   const [useCustomAmount, setUseCustomAmount] = useState(false);
 
   const formattedAmount = formatCurrency(amount);
-<<<<<<< HEAD
-=======
   
   // Check if current user can settle this debt (they must be the one who owes)
   const canSettle = user?.uid === from.id;
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 
   const handleSettle = () => {
     if (useCustomAmount) {
@@ -482,71 +433,6 @@ export function DebtCard({ debt, onSettle, transactions }: DebtCardProps) {
           <p className="text-xs sm:text-sm text-muted-foreground">owes</p>
           <p className="text-xl sm:text-2xl font-bold text-accent mt-1">{formattedAmount}</p>
         </div>
-<<<<<<< HEAD
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-             <Button 
-               variant="outline" 
-               className="w-full mt-4 hover:bg-primary/10 hover:text-primary hover:border-primary transition-all"
-             >
-                <Handshake className="mr-2 h-4 w-4" />
-                Mark as Paid
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="max-w-[min(95vw,28rem)]">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-headline">Confirm Settlement</AlertDialogTitle>
-              <AlertDialogDescription className="text-sm sm:text-base">
-                {useCustomAmount ? (
-                  <>Record a partial settlement of ₹{customAmount} from {formatName(from.name)} to {formatName(to.name)}.</>
-                ) : (
-                  <>Are you sure you want to mark this debt as paid? This will record a settlement of {formattedAmount} from {formatName(from.name)} to {formatName(to.name)}.</>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center space-x-2">
-                <Switcher1
-                  checked={useCustomAmount}
-                  onCheckedChange={setUseCustomAmount}
-                  aria-label="Use custom amount"
-                />
-                <Label className="text-sm font-medium cursor-pointer" onClick={() => setUseCustomAmount(!useCustomAmount)}>
-                  Pay custom amount
-                </Label>
-              </div>
-              {useCustomAmount && (
-                <div className="space-y-2">
-                  <Label htmlFor="customAmount">Amount</Label>
-                  <Input
-                    id="customAmount"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max={amount}
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    placeholder="Enter amount"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Maximum: {formattedAmount}
-                  </p>
-                </div>
-              )}
-            </div>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleSettle}
-                className="w-full sm:w-auto"
-                disabled={useCustomAmount && (parseFloat(customAmount) <= 0 || parseFloat(customAmount) > amount)}
-              >
-                Confirm
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-=======
         
         {/* View Details Button - shown to all users */}
         <ViewDebtDialog debt={debt} transactions={transactions} />
@@ -626,7 +512,6 @@ export function DebtCard({ debt, onSettle, transactions }: DebtCardProps) {
             Awaiting Payment
           </Button>
         )}
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
       </CardContent>
     </Card>
   );

@@ -23,7 +23,13 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useUser } from "@/firebase"
 
-// Helper function to get payment amounts for a purchase
+/**
+ * Helper function to get payment amounts for a purchase
+ * @param purchase - The purchase transaction
+ * @param debtorId - ID of the user who owes money (debt.from.id)
+ * @param creditorId - ID of the user who is owed money (debt.to.id)
+ * @returns Object containing expenseFromPaid (amount paid by debtor) and expenseToPaid (amount paid by creditor)
+ */
 function getPaymentAmounts(purchase: Purchase, debtorId: string, creditorId: string) {
   let expenseFromPaid = 0;
   let expenseToPaid = 0;
@@ -42,7 +48,18 @@ function getPaymentAmounts(purchase: Purchase, debtorId: string, creditorId: str
   return { expenseFromPaid, expenseToPaid };
 }
 
-// Helper function to determine transaction type
+/**
+ * Helper function to determine transaction type based on who paid and who owes
+ * @param expenseFromPaid - Amount paid by the debtor
+ * @param expenseToPaid - Amount paid by the creditor
+ * @param fromShare - Debtor's share of the expense
+ * @param toShare - Creditor's share of the expense
+ * @returns Transaction type:
+ *   - 'debit': Creditor paid, debtor owes (increases debt) - Red entry
+ *   - 'credit': Debtor paid, creditor owes (decreases debt) - Green entry
+ *   - 'mixed': Both paid (net effect on debt) - Blue entry
+ *   - 'third-party': Neither user paid (should be filtered out)
+ */
 function getTransactionType(
   expenseFromPaid: number,
   expenseToPaid: number,
@@ -66,6 +83,58 @@ function getTransactionType(
   }
   
   return 'third-party';
+}
+
+/**
+ * Helper function to calculate debt or credit totals from a list of purchases
+ * @param purchases - Array of purchase transactions
+ * @param debtorId - ID of the user who owes money
+ * @param creditorId - ID of the user who is owed money
+ * @param type - Type of calculation: 'debt' for red entries, 'credit' for green entries
+ * @returns Total amount for the specified type
+ */
+function calculateTotal(
+  purchases: Purchase[],
+  debtorId: string,
+  creditorId: string,
+  type: 'debt' | 'credit'
+): number {
+  return purchases.reduce((sum, p) => {
+    const sharePerPerson = p.amount / p.splitWith.length;
+    const fromShare = p.splitWith.includes(debtorId) ? sharePerPerson : 0;
+    const toShare = p.splitWith.includes(creditorId) ? sharePerPerson : 0;
+    
+    const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debtorId, creditorId);
+    const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
+    
+    if (type === 'debt') {
+      // Pure debit transactions
+      if (transactionType === 'debit') {
+        return sum + fromShare;
+      }
+      // For mixed transactions, add net positive effect
+      if (transactionType === 'mixed') {
+        const netEffect = fromShare - toShare;
+        if (netEffect > 0) {
+          return sum + netEffect;
+        }
+      }
+    } else {
+      // Pure credit transactions
+      if (transactionType === 'credit') {
+        return sum + toShare;
+      }
+      // For mixed transactions, add net negative effect (as positive credit)
+      if (transactionType === 'mixed') {
+        const netEffect = fromShare - toShare;
+        if (netEffect < 0) {
+          return sum + Math.abs(netEffect);
+        }
+      }
+    }
+    
+    return sum;
+  }, 0);
 }
 
 
@@ -346,57 +415,13 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
               <div className="flex justify-between p-2 bg-red-500/5 rounded">
                 <span className="text-muted-foreground">Total Debt (Red entries):</span>
                 <span className="font-semibold text-red-600">
-                  +{formatCurrency(
-                    relevantPurchases.reduce((sum, p) => {
-                      const sharePerPerson = p.amount / p.splitWith.length;
-                      const fromShare = p.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
-                      const toShare = p.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
-                      
-                      const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debt.from.id, debt.to.id);
-                      const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
-                      
-                      // Pure debit transactions
-                      if (transactionType === 'debit') {
-                        return sum + fromShare;
-                      }
-                      // For mixed transactions, add net positive effect
-                      if (transactionType === 'mixed') {
-                        const netEffect = fromShare - toShare;
-                        if (netEffect > 0) {
-                          return sum + netEffect;
-                        }
-                      }
-                      return sum;
-                    }, 0)
-                  )}
+                  +{formatCurrency(calculateTotal(relevantPurchases, debt.from.id, debt.to.id, 'debt'))}
                 </span>
               </div>
               <div className="flex justify-between p-2 bg-green-500/5 rounded">
                 <span className="text-muted-foreground">Total Credit (Green entries):</span>
                 <span className="font-semibold text-green-600">
-                  -{formatCurrency(
-                    relevantPurchases.reduce((sum, p) => {
-                      const sharePerPerson = p.amount / p.splitWith.length;
-                      const fromShare = p.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
-                      const toShare = p.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
-                      
-                      const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debt.from.id, debt.to.id);
-                      const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
-                      
-                      // Pure credit transactions
-                      if (transactionType === 'credit') {
-                        return sum + toShare;
-                      }
-                      // For mixed transactions, add net negative effect (as positive credit)
-                      if (transactionType === 'mixed') {
-                        const netEffect = fromShare - toShare;
-                        if (netEffect < 0) {
-                          return sum + Math.abs(netEffect);
-                        }
-                      }
-                      return sum;
-                    }, 0)
-                  )}
+                  -{formatCurrency(calculateTotal(relevantPurchases, debt.from.id, debt.to.id, 'credit'))}
                 </span>
               </div>
             </div>

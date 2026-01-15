@@ -298,17 +298,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                 Showing all expenses between {formatName(debt.from.name)} and {formatName(debt.to.name)}
               </p>
               <div className="space-y-3">
-                {relevantPurchases
-                  .filter((purchase) => {
-                    // Filter out third-party transactions before mapping
-                    const sharePerPerson = purchase.amount / purchase.splitWith.length;
-                    const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
-                    const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
-                    const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(purchase, debt.from.id, debt.to.id);
-                    const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
-                    return transactionType !== 'third-party';
-                  })
-                  .map((purchase) => {
+                {relevantPurchases.map((purchase) => {
                   const CategoryIcon = getCategoryIcon(purchase.category);
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
@@ -320,6 +310,10 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   // Determine transaction type using helper
                   const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
                   
+                  // Skip third-party transactions
+                  if (transactionType === 'third-party') {
+                    return null;
+                  }
                   // Determine display properties based on transaction type
                   let bgColor, borderColor, textColor, label, shareAmount;
                   if (transactionType === 'debit') {

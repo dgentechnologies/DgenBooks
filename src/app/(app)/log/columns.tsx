@@ -3,11 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import type { Transaction, User, Purchase, Settlement } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
-<<<<<<< HEAD
-import { ArrowUpDown, Pencil, Trash2 } from "lucide-react"
-=======
 import { ArrowUpDown, Pencil, Trash2, Eye } from "lucide-react"
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -28,11 +24,7 @@ import { deletePurchase } from "@/lib/db/purchases"
 import { deleteSettlement } from "@/lib/db/settlements"
 import { useFirestore, useUser } from "@/firebase"
 import { toast } from "@/lib/toast"
-<<<<<<< HEAD
-import { useState } from "react"
-=======
 import { useState, useMemo } from "react"
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 import { getCategoryIcon } from "@/lib/category-icons"
 import { formatName, formatCurrency } from "@/lib/format"
 
@@ -144,15 +136,13 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
   );
 }
 
-<<<<<<< HEAD
-=======
 // View expense details dialog component
 function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; users: User[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
 
-  // Calculate per-head cost
-  const splitWithLength = transaction.splitWith?.length || 0;
+  // Calculate per-head cost for purchases
+  const splitWithLength = transaction.type === 'purchase' ? transaction.splitWith.length : 0;
   const perHeadCost = useMemo(() => {
     return transaction.type === 'purchase' && splitWithLength > 0
       ? transaction.amount / splitWithLength
@@ -360,7 +350,6 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
   );
 }
 
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
 
 export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
@@ -515,8 +504,6 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     }
   },
   {
-<<<<<<< HEAD
-=======
     id: "view",
     header: "View",
     cell: ({ row }) => {
@@ -525,7 +512,6 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
     },
   },
   {
->>>>>>> b1ced05eefb76d6263339274a19fa1e5f88b2ebd
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {

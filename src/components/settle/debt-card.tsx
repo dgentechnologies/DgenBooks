@@ -194,6 +194,56 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
     return combined.sort((a, b) => b.sortDate - a.sortDate);
   }, [relevantPurchases, relevantSettlements]);
 
+  // Client-side reconciliation: Calculate the actual outstanding amount from visible transactions
+  const calculatedOutstanding = useMemo(() => {
+    let debtorOwesCreditor = 0; // How much debtor owes to creditor
+    
+    // Process all purchases
+    relevantPurchases.forEach(purchase => {
+      const sharePerPerson = purchase.amount / purchase.splitWith.length;
+      
+      if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
+        // Multi-payer: Calculate what each participant owes to each payer
+        const creditorPaid = purchase.paidByAmounts[debt.to.id] || 0;
+        const debtorPaid = purchase.paidByAmounts[debt.from.id] || 0;
+        
+        // Debtor's share of what creditor paid
+        if (creditorPaid > 0 && purchase.splitWith.includes(debt.from.id)) {
+          debtorOwesCreditor += creditorPaid / purchase.splitWith.length;
+        }
+        
+        // Creditor's share of what debtor paid (reduces debt)
+        if (debtorPaid > 0 && purchase.splitWith.includes(debt.to.id)) {
+          debtorOwesCreditor -= debtorPaid / purchase.splitWith.length;
+        }
+      } else {
+        // Single payer
+        if (purchase.paidById === debt.to.id && purchase.splitWith.includes(debt.from.id)) {
+          // Creditor paid, debtor participated → debt increases
+          debtorOwesCreditor += sharePerPerson;
+        } else if (purchase.paidById === debt.from.id && purchase.splitWith.includes(debt.to.id)) {
+          // Debtor paid, creditor participated → debt decreases
+          debtorOwesCreditor -= sharePerPerson;
+        }
+      }
+    });
+    
+    // Process all settlements
+    relevantSettlements.forEach(settlement => {
+      if (settlement.type === 'settlement') {
+        if (settlement.fromId === debt.from.id && settlement.toId === debt.to.id) {
+          // Debtor paid to creditor → debt decreases
+          debtorOwesCreditor -= settlement.amount;
+        } else if (settlement.fromId === debt.to.id && settlement.toId === debt.from.id) {
+          // Creditor paid to debtor → debt increases (unusual but possible)
+          debtorOwesCreditor += settlement.amount;
+        }
+      }
+    });
+    
+    return Math.max(0, debtorOwesCreditor); // Can't have negative debt
+  }, [relevantPurchases, relevantSettlements, debt]);
+
   // Calculate amounts
   const calculations = useMemo(() => {
     let fromPaidTotal = 0;
@@ -290,7 +340,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="font-medium">{formatName(debt.to.name)}</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(debt.amount)}</p>
+                <p className="text-xl font-bold text-primary">{formatCurrency(calculatedOutstanding)}</p>
               </div>
               <Avatar className="h-10 w-10">
                 <AvatarImage src={debt.to.avatar} />
@@ -478,7 +528,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           <div>
             <h3 className="font-semibold mb-3">Net Debt Calculation</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              How the outstanding amount is calculated
+              Calculated from all visible transactions
             </p>
             <div className="space-y-2 mb-3 text-sm">
               <div className="flex justify-between p-2 bg-red-500/5 rounded">
@@ -512,13 +562,13 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Net Amount Owed</p>
+                  <p className="text-sm text-muted-foreground">Calculated Outstanding</p>
                   <p className="text-lg font-semibold mt-1">
                     {formatName(debt.from.name)} → {formatName(debt.to.name)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-bold text-accent">{formatCurrency(debt.amount)}</span>
+                  <span className="text-3xl font-bold text-accent">{formatCurrency(calculatedOutstanding)}</span>
                 </div>
               </div>
             </div>
@@ -546,7 +596,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                     </p>
                   </div>
                   <span className={isCurrentUserDebtor ? "font-bold text-red-600 text-xl" : "font-bold text-green-600 text-xl"}>
-                    {formatCurrency(debt.amount)}
+                    {formatCurrency(calculatedOutstanding)}
                   </span>
                 </div>
                 {currentUserSettled > 0 && (
@@ -563,14 +613,14 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           <div className="border-t pt-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
-                <span className="font-semibold">Outstanding Amount:</span>
-                <span className="text-2xl font-bold text-accent">{formatCurrency(debt.amount)}</span>
+                <span className="font-semibold">Calculated Outstanding:</span>
+                <span className="text-2xl font-bold text-accent">{formatCurrency(calculatedOutstanding)}</span>
               </div>
               <p className="text-xs text-muted-foreground text-center">
                 {formatName(debt.from.name)} owes {formatName(debt.to.name)}
               </p>
               <p className="text-xs text-muted-foreground text-center">
-                (After all expenses and settlements)
+                (Calculated from all visible transactions)
               </p>
             </div>
           </div>

@@ -36,6 +36,8 @@ export type Settlement = {
   toId: string;
   amount: number;
   date: string; // ISO string
+  relatedExpenseId?: string; // Optional: Links to specific purchase if item-specific settlement
+  description?: string; // Optional: Description of what was settled
 };
 
 export type Transaction = Purchase | Settlement;

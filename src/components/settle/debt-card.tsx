@@ -87,6 +87,7 @@ function getTransactionType(
 
 /**
  * Helper function to calculate debt or credit totals from a list of purchases
+ * Uses the same per-payer logic as calculatedOutstanding to ensure consistency
  * @param purchases - Array of purchase transactions
  * @param debtorId - ID of the user who owes money
  * @param creditorId - ID of the user who is owed money
@@ -101,38 +102,55 @@ function calculateTotal(
 ): number {
   return purchases.reduce((sum, p) => {
     const sharePerPerson = p.amount / p.splitWith.length;
-    const fromShare = p.splitWith.includes(debtorId) ? sharePerPerson : 0;
-    const toShare = p.splitWith.includes(creditorId) ? sharePerPerson : 0;
+    
+    let debtorOwesToCreditor = 0;
+    let creditorOwesToDebtor = 0;
+    
+    if (p.paymentType === 'multiple' && p.paidByAmounts) {
+      // Multi-payer: Calculate what each participant owes to each payer
+      const creditorPaid = p.paidByAmounts[creditorId] || 0;
+      if (creditorPaid > 0 && p.splitWith.includes(debtorId) && debtorId !== creditorId) {
+        debtorOwesToCreditor = creditorPaid / p.splitWith.length;
+      }
+      
+      const debtorPaid = p.paidByAmounts[debtorId] || 0;
+      if (debtorPaid > 0 && p.splitWith.includes(creditorId) && debtorId !== creditorId) {
+        creditorOwesToDebtor = debtorPaid / p.splitWith.length;
+      }
+    } else {
+      // Single payer
+      if (p.paidById === creditorId && p.splitWith.includes(debtorId)) {
+        debtorOwesToCreditor = sharePerPerson;
+      } else if (p.paidById === debtorId && p.splitWith.includes(creditorId)) {
+        creditorOwesToDebtor = sharePerPerson;
+      }
+    }
     
     const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debtorId, creditorId);
-    const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
+    const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, debtorOwesToCreditor, creditorOwesToDebtor);
     
     if (type === 'debt') {
-      // Pure debit transactions
+      // Pure debit transactions (creditor paid, debtor owes)
       if (transactionType === 'debit') {
-        return sum + fromShare;
+        return sum + debtorOwesToCreditor;
       }
       // For mixed transactions, add net positive effect
       if (transactionType === 'mixed') {
-        const netEffect = fromShare - toShare;
+        const netEffect = debtorOwesToCreditor - creditorOwesToDebtor;
         if (netEffect > 0) {
           return sum + netEffect;
-        } else {
-          return sum; // Negative or zero net effect doesn't contribute to debt
         }
       }
     } else {
-      // Pure credit transactions
+      // Pure credit transactions (debtor paid, creditor owes)
       if (transactionType === 'credit') {
-        return sum + toShare;
+        return sum + creditorOwesToDebtor;
       }
       // For mixed transactions, add net negative effect (as positive credit)
       if (transactionType === 'mixed') {
-        const netEffect = fromShare - toShare;
+        const netEffect = debtorOwesToCreditor - creditorOwesToDebtor;
         if (netEffect < 0) {
           return sum + Math.abs(netEffect);
-        } else {
-          return sum; // Positive or zero net effect doesn't contribute to credit
         }
       }
     }

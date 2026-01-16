@@ -23,31 +23,172 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useUser } from "@/firebase"
 
+/**
+ * Helper function to get payment amounts for a purchase
+ * @param purchase - The purchase transaction
+ * @param debtorId - ID of the user who owes money (debt.from.id)
+ * @param creditorId - ID of the user who is owed money (debt.to.id)
+ * @returns Object containing expenseFromPaid (amount paid by debtor) and expenseToPaid (amount paid by creditor)
+ */
+function getPaymentAmounts(purchase: Purchase, debtorId: string, creditorId: string) {
+  let expenseFromPaid = 0;
+  let expenseToPaid = 0;
+  
+  if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
+    expenseFromPaid = purchase.paidByAmounts[debtorId] || 0;
+    expenseToPaid = purchase.paidByAmounts[creditorId] || 0;
+  } else {
+    if (purchase.paidById === debtorId) {
+      expenseFromPaid = purchase.amount;
+    } else if (purchase.paidById === creditorId) {
+      expenseToPaid = purchase.amount;
+    }
+  }
+  
+  return { expenseFromPaid, expenseToPaid };
+}
+
+/**
+ * Helper function to determine transaction type based on who paid and who owes
+ * @param expenseFromPaid - Amount paid by the debtor
+ * @param expenseToPaid - Amount paid by the creditor
+ * @param fromShare - Debtor's share of the expense
+ * @param toShare - Creditor's share of the expense
+ * @returns Transaction type:
+ *   - 'debit': Creditor paid, debtor owes (increases debt) - Red entry
+ *   - 'credit': Debtor paid, creditor owes (decreases debt) - Green entry
+ *   - 'mixed': Both paid (net effect on debt) - Blue entry
+ *   - 'third-party': Neither user paid (should be filtered out)
+ */
+function getTransactionType(
+  expenseFromPaid: number,
+  expenseToPaid: number,
+  fromShare: number,
+  toShare: number
+): 'debit' | 'credit' | 'mixed' | 'third-party' {
+  const creditorPaidForDebtor = expenseToPaid > 0 && fromShare > 0;
+  const debtorPaidForCreditor = expenseFromPaid > 0 && toShare > 0;
+  
+  // If neither user paid (third party), mark as third-party
+  if (expenseFromPaid === 0 && expenseToPaid === 0) {
+    return 'third-party';
+  }
+  
+  if (creditorPaidForDebtor && !debtorPaidForCreditor) {
+    return 'debit'; // Red: Creditor paid, Debtor owes
+  } else if (debtorPaidForCreditor && !creditorPaidForDebtor) {
+    return 'credit'; // Green: Debtor paid, Creditor owes
+  } else if (creditorPaidForDebtor && debtorPaidForCreditor) {
+    return 'mixed'; // Blue: Both paid
+  }
+  
+  return 'third-party';
+}
+
+/**
+ * Helper function to calculate debt or credit totals from a list of purchases
+ * Uses the same per-payer logic as calculatedOutstanding to ensure consistency
+ * @param purchases - Array of purchase transactions
+ * @param debtorId - ID of the user who owes money
+ * @param creditorId - ID of the user who is owed money
+ * @param type - Type of calculation: 'debt' for red entries, 'credit' for green entries
+ * @returns Total amount for the specified type
+ */
+function calculateTotal(
+  purchases: Purchase[],
+  debtorId: string,
+  creditorId: string,
+  type: 'debt' | 'credit'
+): number {
+  return purchases.reduce((sum, p) => {
+    const sharePerPerson = p.amount / p.splitWith.length;
+    
+    let debtorOwesToCreditor = 0;
+    let creditorOwesToDebtor = 0;
+    
+    if (p.paymentType === 'multiple' && p.paidByAmounts) {
+      // Multi-payer: Calculate what each participant owes to each payer
+      const creditorPaid = p.paidByAmounts[creditorId] || 0;
+      if (creditorPaid > 0 && p.splitWith.includes(debtorId) && debtorId !== creditorId) {
+        debtorOwesToCreditor = creditorPaid / p.splitWith.length;
+      }
+      
+      const debtorPaid = p.paidByAmounts[debtorId] || 0;
+      if (debtorPaid > 0 && p.splitWith.includes(creditorId) && debtorId !== creditorId) {
+        creditorOwesToDebtor = debtorPaid / p.splitWith.length;
+      }
+    } else {
+      // Single payer
+      if (p.paidById === creditorId && p.splitWith.includes(debtorId)) {
+        debtorOwesToCreditor = sharePerPerson;
+      } else if (p.paidById === debtorId && p.splitWith.includes(creditorId)) {
+        creditorOwesToDebtor = sharePerPerson;
+      }
+    }
+    
+    const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(p, debtorId, creditorId);
+    const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, debtorOwesToCreditor, creditorOwesToDebtor);
+    
+    if (type === 'debt') {
+      // Pure debit transactions (creditor paid, debtor owes)
+      if (transactionType === 'debit') {
+        return sum + debtorOwesToCreditor;
+      }
+      // For mixed transactions, add net positive effect
+      if (transactionType === 'mixed') {
+        const netEffect = debtorOwesToCreditor - creditorOwesToDebtor;
+        if (netEffect > 0) {
+          return sum + netEffect;
+        }
+      }
+    } else {
+      // Pure credit transactions (debtor paid, creditor owes)
+      if (transactionType === 'credit') {
+        return sum + creditorOwesToDebtor;
+      }
+      // For mixed transactions, add net negative effect (as positive credit)
+      if (transactionType === 'mixed') {
+        const netEffect = debtorOwesToCreditor - creditorOwesToDebtor;
+        if (netEffect < 0) {
+          return sum + Math.abs(netEffect);
+        }
+      }
+    }
+    
+    return sum;
+  }, 0);
+}
+
 
 // View debt details dialog component
 function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Transaction[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
 
-  // Get all purchases related to this debt
-  // Include expenses where:
-  // - The creditor (to) paid for it AND the debtor (from) participated
-  // This shows only expenses that contribute to the debt between these two users
+  // Get all purchases related to this debt - BOTH sides of the ledger
+  // Type A (Debits/Red): Creditor paid, Debtor participated → increases debt
+  // Type B (Credits/Green): Debtor paid, Creditor participated → decreases debt
   const relevantPurchases = useMemo(() => {
     return transactions.filter((t): t is Purchase => {
       if (t.type !== 'purchase') return false;
       
-      // Check if debtor participated in the expense
+      // Check if both users participated in the expense
       const debtorParticipated = t.splitWith.includes(debt.from.id);
-      if (!debtorParticipated) return false;
+      const creditorParticipated = t.splitWith.includes(debt.to.id);
       
-      // Check if creditor paid for the expense
+      // Check who paid for the expense
       const creditorPaid = t.paymentType === 'multiple' 
         ? !!(t.paidByAmounts && t.paidByAmounts[debt.to.id] && t.paidByAmounts[debt.to.id] > 0)
         : t.paidById === debt.to.id;
       
-      // Include only if BOTH conditions are met: creditor paid AND debtor participated
-      return creditorPaid;
+      const debtorPaid = t.paymentType === 'multiple'
+        ? !!(t.paidByAmounts && t.paidByAmounts[debt.from.id] && t.paidByAmounts[debt.from.id] > 0)
+        : t.paidById === debt.from.id;
+      
+      // Include if:
+      // - Creditor paid AND debtor participated (Type A - Debit)
+      // - Debtor paid AND creditor participated (Type B - Credit)
+      return (creditorPaid && debtorParticipated) || (debtorPaid && creditorParticipated);
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date, newest first
   }, [transactions, debt]);
 
@@ -61,6 +202,72 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
       );
     });
   }, [transactions, debt]);
+
+  // Combine purchases and settlements, then sort by date (newest first)
+  const allTransactions = useMemo(() => {
+    const combined = [
+      ...relevantPurchases.map(p => ({ ...p, sortDate: new Date(p.date).getTime() })),
+      ...relevantSettlements.map(s => ({ ...s, sortDate: new Date(s.date).getTime() }))
+    ];
+    return combined.sort((a, b) => b.sortDate - a.sortDate);
+  }, [relevantPurchases, relevantSettlements]);
+
+  // Client-side reconciliation: Calculate the actual outstanding amount from visible transactions
+  const calculatedOutstanding = useMemo(() => {
+    let debtorOwesCreditor = 0; // How much debtor owes to creditor
+    
+    // Process all purchases
+    relevantPurchases.forEach((purchase) => {
+      const sharePerPerson = purchase.amount / purchase.splitWith.length;
+      
+      if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
+        // Multi-payer: Calculate what each participant owes to each payer
+        // This follows the same logic as src/lib/logic.ts
+        
+        // For the creditor: if they paid, calculate what the debtor owes them
+        const creditorPaid = purchase.paidByAmounts[debt.to.id] || 0;
+        if (creditorPaid > 0 && purchase.splitWith.includes(debt.from.id) && debt.from.id !== debt.to.id) {
+          // Debtor owes creditor their share of what creditor paid
+          // Share = (amount creditor paid) / (number of people splitting)
+          const debtorShareOfCreditorPayment = creditorPaid / purchase.splitWith.length;
+          debtorOwesCreditor += debtorShareOfCreditorPayment;
+        }
+        
+        // For the debtor: if they paid, calculate what the creditor owes them (reduces debt)
+        const debtorPaid = purchase.paidByAmounts[debt.from.id] || 0;
+        if (debtorPaid > 0 && purchase.splitWith.includes(debt.to.id) && debt.from.id !== debt.to.id) {
+          // Creditor owes debtor their share of what debtor paid
+          // This reduces the overall debt from debtor to creditor
+          const creditorShareOfDebtorPayment = debtorPaid / purchase.splitWith.length;
+          debtorOwesCreditor -= creditorShareOfDebtorPayment;
+        }
+      } else {
+        // Single payer
+        if (purchase.paidById === debt.to.id && purchase.splitWith.includes(debt.from.id)) {
+          // Creditor paid, debtor participated → debt increases
+          debtorOwesCreditor += sharePerPerson;
+        } else if (purchase.paidById === debt.from.id && purchase.splitWith.includes(debt.to.id)) {
+          // Debtor paid, creditor participated → debt decreases
+          debtorOwesCreditor -= sharePerPerson;
+        }
+      }
+    });
+    
+    // Process all settlements
+    relevantSettlements.forEach((settlement) => {
+      if (settlement.type === 'settlement') {
+        if (settlement.fromId === debt.from.id && settlement.toId === debt.to.id) {
+          // Debtor paid to creditor → debt decreases
+          debtorOwesCreditor -= settlement.amount;
+        } else if (settlement.fromId === debt.to.id && settlement.toId === debt.from.id) {
+          // Creditor paid to debtor → debt increases (unusual but possible)
+          debtorOwesCreditor += settlement.amount;
+        }
+      }
+    });
+    
+    return Math.max(0, debtorOwesCreditor); // Can't have negative debt
+  }, [relevantPurchases, relevantSettlements, debt]);
 
   // Calculate amounts
   const calculations = useMemo(() => {
@@ -158,7 +365,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="font-medium">{formatName(debt.to.name)}</p>
-                <p className="text-xl font-bold text-primary">{formatCurrency(debt.amount)}</p>
+                <p className="text-xl font-bold text-primary">{formatCurrency(calculatedOutstanding)}</p>
               </div>
               <Avatar className="h-10 w-10">
                 <AvatarImage src={debt.to.avatar} />
@@ -167,51 +374,77 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             </div>
           </div>
 
-          {/* Expenses Contributing to Debt */}
-          {relevantPurchases.length > 0 && (
+          {/* Ledger: Debits, Credits, and Settlements */}
+          {allTransactions.length > 0 && (
             <div>
-              <h3 className="font-semibold mb-3">Expenses Contributing to This Debt</h3>
+              <h3 className="font-semibold mb-3">Transaction Ledger</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Showing all transactions between {formatName(debt.from.name)} and {formatName(debt.to.name)}
+              </p>
               <div className="space-y-3">
-                {relevantPurchases.map((purchase) => {
+                {allTransactions.map((transaction) => {
+                  // Handle Purchase transactions
+                  if (transaction.type === 'purchase') {
+                    const purchase = transaction as Purchase;
                   const CategoryIcon = getCategoryIcon(purchase.category);
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
-                  // Determine who paid for this expense
-                  let paidBy: string = '';
-                  let expenseFromPaid = 0;
-                  let expenseToPaid = 0;
+                  // Calculate payment amounts and shares
+                  const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(purchase, debt.from.id, debt.to.id);
+                  
+                  // For multi-payer, calculate the SPECIFIC debt between these two users
+                  let debtorOwesToCreditor = 0; // What debtor owes creditor for THIS transaction
+                  let creditorOwesToDebtor = 0; // What creditor owes debtor for THIS transaction
                   
                   if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
-                    expenseFromPaid = purchase.paidByAmounts[debt.from.id] || 0;
-                    expenseToPaid = purchase.paidByAmounts[debt.to.id] || 0;
-                    
-                    if (expenseFromPaid > 0 && expenseToPaid > 0) {
-                      paidBy = `Paid by both (${formatName(debt.from.name)}: ${formatCurrency(expenseFromPaid)}, ${formatName(debt.to.name)}: ${formatCurrency(expenseToPaid)})`;
-                    } else if (expenseFromPaid > 0) {
-                      paidBy = `Paid by ${formatName(debt.from.name)}`;
-                    } else if (expenseToPaid > 0) {
-                      paidBy = `Paid by ${formatName(debt.to.name)}`;
-                    } else {
-                      // Paid by someone else
-                      const payerIds = Object.keys(purchase.paidByAmounts);
-                      paidBy = payerIds.length > 0 ? `Paid by others` : 'Unknown payer';
+                    // If creditor paid, calculate what debtor owes creditor
+                    if (expenseToPaid > 0 && purchase.splitWith.includes(debt.from.id) && debt.from.id !== debt.to.id) {
+                      debtorOwesToCreditor = expenseToPaid / purchase.splitWith.length;
+                    }
+                    // If debtor paid, calculate what creditor owes debtor
+                    if (expenseFromPaid > 0 && purchase.splitWith.includes(debt.to.id) && debt.from.id !== debt.to.id) {
+                      creditorOwesToDebtor = expenseFromPaid / purchase.splitWith.length;
                     }
                   } else {
-                    if (purchase.paidById === debt.from.id) {
-                      expenseFromPaid = purchase.amount;
-                      paidBy = `Paid by ${formatName(debt.from.name)}`;
-                    } else if (purchase.paidById === debt.to.id) {
-                      expenseToPaid = purchase.amount;
-                      paidBy = `Paid by ${formatName(debt.to.name)}`;
-                    } else {
-                      // Paid by someone else - find their name if possible
-                      paidBy = `Paid by others`;
+                    // Single payer scenario
+                    if (purchase.paidById === debt.to.id && purchase.splitWith.includes(debt.from.id)) {
+                      debtorOwesToCreditor = sharePerPerson;
+                    } else if (purchase.paidById === debt.from.id && purchase.splitWith.includes(debt.to.id)) {
+                      creditorOwesToDebtor = sharePerPerson;
                     }
                   }
                   
-                  // Calculate shares for both users
-                  const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
-                  const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
+                  // Determine transaction type using helper
+                  const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, debtorOwesToCreditor, creditorOwesToDebtor);
+                  
+                  // Skip third-party transactions
+                  if (transactionType === 'third-party') {
+                    return null;
+                  }
+                  // Determine display properties based on transaction type
+                  let bgColor, borderColor, textColor, label, shareAmount;
+                  if (transactionType === 'debit') {
+                    // Red entry: Debt increases
+                    bgColor = 'bg-red-500/5';
+                    borderColor = 'border-red-500/20';
+                    textColor = 'text-red-600';
+                    label = `Paid by ${formatName(debt.to.name)}`;
+                    shareAmount = debtorOwesToCreditor; // What debtor owes creditor
+                  } else if (transactionType === 'credit') {
+                    // Green entry: Debt decreases
+                    bgColor = 'bg-green-500/5';
+                    borderColor = 'border-green-500/20';
+                    textColor = 'text-green-600';
+                    label = `Paid by ${formatName(debt.from.name)}`;
+                    shareAmount = creditorOwesToDebtor; // What creditor owes debtor (reduces debt)
+                  } else {
+                    // Mixed: Both paid - show net effect
+                    bgColor = 'bg-blue-500/5';
+                    borderColor = 'border-blue-500/20';
+                    textColor = 'text-blue-600';
+                    label = `Paid by both`;
+                    shareAmount = debtorOwesToCreditor - creditorOwesToDebtor; // Net effect on debt (positive increases, negative decreases)
+                  }
                   
                   return (
                     <div key={purchase.id} className="border rounded-lg p-3 bg-muted/30">
@@ -223,7 +456,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{purchase.itemName}</p>
                           <p className="text-xs text-muted-foreground">{purchase.category}</p>
-                          <p className="text-xs font-medium text-primary mt-1">{paidBy}</p>
+                          <p className="text-xs font-medium text-primary mt-1">{label}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {new Date(purchase.date).toLocaleDateString('en-IN', { 
                               month: 'short', 
@@ -238,19 +471,99 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         </div>
                       </div>
                       
-                      {/* Debtor's Share - Highlighted */}
+                      {/* Share Display - Color Coded */}
                       <div className="pt-2 border-t">
-                        <div className="bg-red-500/5 rounded p-2 border border-red-500/20">
+                        <div className={`${bgColor} rounded p-2 border ${borderColor}`}>
                           <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="font-medium">{formatName(debt.from.name)}'s Share:</div>
-                            <div className="text-right font-semibold text-red-600">
-                              {formatCurrency(fromShare)}
+                            <div className="font-medium">
+                              {transactionType === 'debit' && `${formatName(debt.from.name)}'s Share:`}
+                              {transactionType === 'credit' && `${formatName(debt.to.name)}'s Share:`}
+                              {transactionType === 'mixed' && `Net Impact on Debt:`}
+                            </div>
+                            <div className={`text-right font-semibold ${textColor}`}>
+                              {transactionType === 'debit' && `+${formatCurrency(shareAmount)}`}
+                              {transactionType === 'credit' && `-${formatCurrency(shareAmount)}`}
+                              {transactionType === 'mixed' && (shareAmount >= 0 ? `+${formatCurrency(shareAmount)}` : `-${formatCurrency(Math.abs(shareAmount))}`)}
+                            </div>
+                          </div>
+                          {transactionType === 'mixed' && (
+                            <div className="mt-2 pt-2 border-t border-dashed border-muted-foreground/20 text-xs text-muted-foreground">
+                              <div className="flex justify-between">
+                                <span>{formatName(debt.from.name)} paid:</span>
+                                <span>{formatCurrency(expenseFromPaid)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{formatName(debt.to.name)} paid:</span>
+                                <span>{formatCurrency(expenseToPaid)}</span>
+                              </div>
+                              <div className="flex justify-between mt-1 pt-1 border-t border-dashed">
+                                <span>{formatName(debt.from.name)} owes {formatName(debt.to.name)}:</span>
+                                <span>{formatCurrency(debtorOwesToCreditor)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{formatName(debt.to.name)} owes {formatName(debt.from.name)}:</span>
+                                <span>{formatCurrency(creditorOwesToDebtor)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  }
+                  
+                  // Handle Settlement transactions
+                  if (transaction.type === 'settlement') {
+                    const settlement = transaction;
+                    
+                    // Settlement from debtor to creditor reduces the debt
+                    const isFromDebtorToCreditor = settlement.fromId === debt.from.id && settlement.toId === debt.to.id;
+                    
+                    return (
+                      <div key={settlement.id} className="border rounded-lg p-3 bg-muted/30">
+                        {/* Settlement Header */}
+                        <div className="flex items-start gap-2 mb-3">
+                          <div className="rounded-full p-1.5 bg-green-500/10 flex-shrink-0 mt-0.5">
+                            <Handshake className="h-3 w-3 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {isFromDebtorToCreditor ? 'Payment Received' : 'Payment Made'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Settlement</p>
+                            <p className="text-xs font-medium text-primary mt-1">
+                              {formatName(settlement.fromId === debt.from.id ? debt.from.name : debt.to.name)} → {formatName(settlement.toId === debt.from.id ? debt.from.name : debt.to.name)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(settlement.date).toLocaleDateString('en-IN', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-semibold text-sm">{formatCurrency(settlement.amount)}</p>
+                            <p className="text-xs text-muted-foreground">Amount</p>
+                          </div>
+                        </div>
+                        
+                        {/* Settlement Display - Always Green (reduces debt) */}
+                        <div className="pt-2 border-t">
+                          <div className="bg-green-500/5 rounded p-2 border border-green-500/20">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="font-medium">Settlement Credit:</div>
+                              <div className="text-right font-semibold text-green-600">
+                                -{formatCurrency(settlement.amount)}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
+                    );
+                  }
+                  
+                  return null;
                 })}
               </div>
             </div>
@@ -258,60 +571,57 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
 
           {/* Settlement Calculation */}
           <div>
-            <h3 className="font-semibold mb-3">Debt Calculation</h3>
+            <h3 className="font-semibold mb-3">Net Debt Calculation</h3>
             <p className="text-xs text-muted-foreground mb-3">
-              Net debt between {formatName(debt.from.name)} and {formatName(debt.to.name)}
+              Calculated from all visible transactions
             </p>
+            <div className="space-y-2 mb-3 text-sm">
+              <div className="flex justify-between p-2 bg-red-500/5 rounded">
+                <span className="text-muted-foreground">Total Debt (Red entries):</span>
+                <span className="font-semibold text-red-600">
+                  +{formatCurrency(calculateTotal(relevantPurchases, debt.from.id, debt.to.id, 'debt'))}
+                </span>
+              </div>
+              <div className="flex justify-between p-2 bg-green-500/5 rounded">
+                <span className="text-muted-foreground">Total Credit (Green entries):</span>
+                <span className="font-semibold text-green-600">
+                  -{formatCurrency(calculateTotal(relevantPurchases, debt.from.id, debt.to.id, 'credit'))}
+                </span>
+              </div>
+              <div className="flex justify-between p-2 bg-green-500/5 rounded">
+                <span className="text-muted-foreground">Settlements Paid:</span>
+                <span className="font-semibold text-green-600">
+                  -{formatCurrency(
+                    relevantSettlements.reduce((sum, s) => {
+                      if (s.type !== 'settlement') return sum;
+                      // Settlements from debtor to creditor reduce the debt
+                      if (s.fromId === debt.from.id && s.toId === debt.to.id) {
+                        return sum + s.amount;
+                      }
+                      return sum;
+                    }, 0)
+                  )}
+                </span>
+              </div>
+            </div>
             <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Amount Owed</p>
+                  <p className="text-sm text-muted-foreground">Calculated Outstanding</p>
                   <p className="text-lg font-semibold mt-1">
                     {formatName(debt.from.name)} → {formatName(debt.to.name)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-bold text-accent">{formatCurrency(debt.amount)}</span>
+                  <span className="text-3xl font-bold text-accent">{formatCurrency(calculatedOutstanding)}</span>
                 </div>
               </div>
             </div>
             
             <div className="mt-3 p-2 bg-blue-500/5 rounded text-xs text-muted-foreground">
-              <p>💡 This amount represents the net debt calculated from all shared expenses and settlements between these two users.</p>
+              <p>💡 Net Debt = Total Debt (Red) - Total Credit (Green) - Settlements Paid</p>
             </div>
           </div>
-
-          {/* Past Settlements */}
-          {relevantSettlements.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-3">Past Settlements</h3>
-              <div className="space-y-2">
-                {relevantSettlements.map((settlement) => {
-                  if (settlement.type !== 'settlement') return null;
-                  const isFromToTo = settlement.fromId === debt.from.id;
-                  return (
-                    <div key={settlement.id} className="flex justify-between items-center p-2 bg-green-500/10 rounded">
-                      <span className="text-sm">
-                        {isFromToTo 
-                          ? `${formatName(debt.from.name)} → ${formatName(debt.to.name)}`
-                          : `${formatName(debt.to.name)} → ${formatName(debt.from.name)}`
-                        }
-                      </span>
-                      <div className="text-right">
-                        <span className="font-medium text-green-600">{formatCurrency(settlement.amount)}</span>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(settlement.date).toLocaleDateString('en-IN', { 
-                            month: 'short', 
-                            day: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Current User Summary (if user is involved) */}
           {user && (user.uid === debt.from.id || user.uid === debt.to.id) && (
@@ -331,7 +641,7 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                     </p>
                   </div>
                   <span className={isCurrentUserDebtor ? "font-bold text-red-600 text-xl" : "font-bold text-green-600 text-xl"}>
-                    {formatCurrency(debt.amount)}
+                    {formatCurrency(calculatedOutstanding)}
                   </span>
                 </div>
                 {currentUserSettled > 0 && (
@@ -348,14 +658,14 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           <div className="border-t pt-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
-                <span className="font-semibold">Outstanding Amount:</span>
-                <span className="text-2xl font-bold text-accent">{formatCurrency(debt.amount)}</span>
+                <span className="font-semibold">Calculated Outstanding:</span>
+                <span className="text-2xl font-bold text-accent">{formatCurrency(calculatedOutstanding)}</span>
               </div>
               <p className="text-xs text-muted-foreground text-center">
                 {formatName(debt.from.name)} owes {formatName(debt.to.name)}
               </p>
               <p className="text-xs text-muted-foreground text-center">
-                (After all expenses and settlements)
+                (Calculated from all visible transactions)
               </p>
             </div>
           </div>

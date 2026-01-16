@@ -766,8 +766,9 @@ export function DebtCard({ debt, onSettle, transactions, onSettleExpense }: Debt
 
   const formattedAmount = formatCurrency(amount);
   
-  // Check if current user can settle this debt (they must be the one who owes)
-  const canSettle = user?.uid === from.id;
+  // Check if current user is involved in this debt (either debtor or creditor)
+  const canSettle = user?.uid === from.id || user?.uid === to.id;
+  const isDebtor = user?.uid === from.id;
 
   const handleSettle = () => {
     if (useCustomAmount) {

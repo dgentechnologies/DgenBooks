@@ -185,6 +185,15 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
     });
   }, [transactions, debt]);
 
+  // Combine purchases and settlements, then sort by date (newest first)
+  const allTransactions = useMemo(() => {
+    const combined = [
+      ...relevantPurchases.map(p => ({ ...p, sortDate: new Date(p.date).getTime() })),
+      ...relevantSettlements.map(s => ({ ...s, sortDate: new Date(s.date).getTime() }))
+    ];
+    return combined.sort((a, b) => b.sortDate - a.sortDate);
+  }, [relevantPurchases, relevantSettlements]);
+
   // Calculate amounts
   const calculations = useMemo(() => {
     let fromPaidTotal = 0;
@@ -290,15 +299,18 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             </div>
           </div>
 
-          {/* Ledger: Debits and Credits */}
-          {relevantPurchases.length > 0 && (
+          {/* Ledger: Debits, Credits, and Settlements */}
+          {allTransactions.length > 0 && (
             <div>
               <h3 className="font-semibold mb-3">Transaction Ledger</h3>
               <p className="text-xs text-muted-foreground mb-3">
-                Showing all expenses between {formatName(debt.from.name)} and {formatName(debt.to.name)}
+                Showing all transactions between {formatName(debt.from.name)} and {formatName(debt.to.name)}
               </p>
               <div className="space-y-3">
-                {relevantPurchases.map((purchase) => {
+                {allTransactions.map((transaction) => {
+                  // Handle Purchase transactions
+                  if (transaction.type === 'purchase') {
+                    const purchase = transaction as Purchase;
                   const CategoryIcon = getCategoryIcon(purchase.category);
                   const sharePerPerson = purchase.amount / purchase.splitWith.length;
                   
@@ -402,7 +414,61 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                         </div>
                       </div>
                     </div>
-                  );
+                    );
+                  }
+                  
+                  // Handle Settlement transactions
+                  if (transaction.type === 'settlement') {
+                    const settlement = transaction;
+                    
+                    // Settlement from debtor to creditor reduces the debt
+                    const isFromDebtorToCreditor = settlement.fromId === debt.from.id && settlement.toId === debt.to.id;
+                    
+                    return (
+                      <div key={settlement.id} className="border rounded-lg p-3 bg-muted/30">
+                        {/* Settlement Header */}
+                        <div className="flex items-start gap-2 mb-3">
+                          <div className="rounded-full p-1.5 bg-green-500/10 flex-shrink-0 mt-0.5">
+                            <Handshake className="h-3 w-3 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {isFromDebtorToCreditor ? 'Payment Received' : 'Payment Made'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Settlement</p>
+                            <p className="text-xs font-medium text-primary mt-1">
+                              {formatName(settlement.fromId === debt.from.id ? debt.from.name : debt.to.name)} → {formatName(settlement.toId === debt.from.id ? debt.from.name : debt.to.name)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(settlement.date).toLocaleDateString('en-IN', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-semibold text-sm">{formatCurrency(settlement.amount)}</p>
+                            <p className="text-xs text-muted-foreground">Amount</p>
+                          </div>
+                        </div>
+                        
+                        {/* Settlement Display - Always Green (reduces debt) */}
+                        <div className="pt-2 border-t">
+                          <div className="bg-green-500/5 rounded p-2 border border-green-500/20">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="font-medium">Settlement Credit:</div>
+                              <div className="text-right font-semibold text-green-600">
+                                -{formatCurrency(settlement.amount)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return null;
                 })}
               </div>
             </div>
@@ -427,6 +493,21 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   -{formatCurrency(calculateTotal(relevantPurchases, debt.from.id, debt.to.id, 'credit'))}
                 </span>
               </div>
+              <div className="flex justify-between p-2 bg-green-500/5 rounded">
+                <span className="text-muted-foreground">Settlements Paid:</span>
+                <span className="font-semibold text-green-600">
+                  -{formatCurrency(
+                    relevantSettlements.reduce((sum, s) => {
+                      if (s.type !== 'settlement') return sum;
+                      // Settlements from debtor to creditor reduce the debt
+                      if (s.fromId === debt.from.id && s.toId === debt.to.id) {
+                        return sum + s.amount;
+                      }
+                      return sum;
+                    }, 0)
+                  )}
+                </span>
+              </div>
             </div>
             <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
               <div className="flex items-center justify-between">
@@ -443,41 +524,9 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
             </div>
             
             <div className="mt-3 p-2 bg-blue-500/5 rounded text-xs text-muted-foreground">
-              <p>💡 Net Debt = Total Debt (Red) - Total Credit (Green) - Past Settlements</p>
+              <p>💡 Net Debt = Total Debt (Red) - Total Credit (Green) - Settlements Paid</p>
             </div>
           </div>
-
-          {/* Past Settlements */}
-          {relevantSettlements.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-3">Past Settlements</h3>
-              <div className="space-y-2">
-                {relevantSettlements.map((settlement) => {
-                  if (settlement.type !== 'settlement') return null;
-                  const isFromToTo = settlement.fromId === debt.from.id;
-                  return (
-                    <div key={settlement.id} className="flex justify-between items-center p-2 bg-green-500/10 rounded">
-                      <span className="text-sm">
-                        {isFromToTo 
-                          ? `${formatName(debt.from.name)} → ${formatName(debt.to.name)}`
-                          : `${formatName(debt.to.name)} → ${formatName(debt.from.name)}`
-                        }
-                      </span>
-                      <div className="text-right">
-                        <span className="font-medium text-green-600">{formatCurrency(settlement.amount)}</span>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(settlement.date).toLocaleDateString('en-IN', { 
-                            month: 'short', 
-                            day: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Current User Summary (if user is involved) */}
           {user && (user.uid === debt.from.id || user.uid === debt.to.id) && (

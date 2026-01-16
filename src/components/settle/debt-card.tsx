@@ -551,7 +551,7 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
                       </div>
                       
                       {/* Settle Button - Visible to Both Parties */}
-                      {onSettleExpense && shareAmount > 0 && (
+                      {onSettleExpense && Math.abs(shareAmount) > 0 && (
                         <div className="pt-2 border-t mt-2">
                           <Button
                             variant="ghost"

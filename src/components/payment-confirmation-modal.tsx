@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,14 @@ export function PaymentConfirmationModal({
   const [paymentType, setPaymentType] = useState<"full" | "partial">("full");
   const [customAmount, setCustomAmount] = useState<string>(shareAmount.toFixed(2));
 
+  // Update custom amount when share amount changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPaymentType("full");
+      setCustomAmount(shareAmount.toFixed(2));
+    }
+  }, [isOpen, shareAmount]);
+
   const handleConfirm = () => {
     const amount = paymentType === "full" ? shareAmount : parseFloat(customAmount);
     
@@ -47,10 +55,6 @@ export function PaymentConfirmationModal({
     
     onConfirm(amount);
     onOpenChange(false);
-    
-    // Reset state for next use
-    setPaymentType("full");
-    setCustomAmount(shareAmount.toFixed(2));
   };
 
   // Update custom amount when share amount changes or payment type changes to full
@@ -135,7 +139,7 @@ export function PaymentConfirmationModal({
                 Maximum: {formatCurrency(shareAmount)}
               </p>
             )}
-            {paymentType === "partial" && !isValidAmount && parsedAmount > 0 && (
+            {paymentType === "partial" && !isValidAmount && (
               <p className="text-xs text-red-600">
                 Amount cannot exceed {formatCurrency(shareAmount)}
               </p>

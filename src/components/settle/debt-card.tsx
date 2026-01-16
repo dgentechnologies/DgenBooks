@@ -214,29 +214,15 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
 
   // Client-side reconciliation: Calculate the actual outstanding amount from visible transactions
   const calculatedOutstanding = useMemo(() => {
-    console.group(`🧮 Detailed Debt Audit: ${formatName(debt.from.name)} vs ${formatName(debt.to.name)}`);
-    console.log(`👤 Debtor (owes): ${formatName(debt.from.name)} (${debt.from.id})`);
-    console.log(`👤 Creditor (owed): ${formatName(debt.to.name)} (${debt.to.id})`);
-    console.log(`📊 Processing ${relevantPurchases.length} purchases and ${relevantSettlements.length} settlements`);
-    console.log('─'.repeat(80));
-    
     let debtorOwesCreditor = 0; // How much debtor owes to creditor
     
     // Process all purchases
-    relevantPurchases.forEach((purchase, index) => {
+    relevantPurchases.forEach((purchase) => {
       const sharePerPerson = purchase.amount / purchase.splitWith.length;
-      const beforeAmount = debtorOwesCreditor;
-      let changeAmount = 0;
-      let reason = '';
       
       if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
         // Multi-payer: Calculate what each participant owes to each payer
         // This follows the same logic as src/lib/logic.ts
-        
-        const payers = Object.entries(purchase.paidByAmounts || {})
-          .filter(([_, amt]) => amt > 0)
-          .map(([id, amt]) => `${id.substring(0, 8)}... (₹${amt.toFixed(2)})`)
-          .join(', ');
         
         // For the creditor: if they paid, calculate what the debtor owes them
         const creditorPaid = purchase.paidByAmounts[debt.to.id] || 0;
@@ -245,8 +231,6 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           // Share = (amount creditor paid) / (number of people splitting)
           const debtorShareOfCreditorPayment = creditorPaid / purchase.splitWith.length;
           debtorOwesCreditor += debtorShareOfCreditorPayment;
-          changeAmount += debtorShareOfCreditorPayment;
-          reason = `Creditor paid ₹${creditorPaid.toFixed(2)} / ${purchase.splitWith.length} people = +₹${debtorShareOfCreditorPayment.toFixed(2)}`;
         }
         
         // For the debtor: if they paid, calculate what the creditor owes them (reduces debt)
@@ -256,106 +240,33 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           // This reduces the overall debt from debtor to creditor
           const creditorShareOfDebtorPayment = debtorPaid / purchase.splitWith.length;
           debtorOwesCreditor -= creditorShareOfDebtorPayment;
-          changeAmount -= creditorShareOfDebtorPayment;
-          reason += (reason ? ' | ' : '') + `Debtor paid ₹${debtorPaid.toFixed(2)} / ${purchase.splitWith.length} people = -₹${creditorShareOfDebtorPayment.toFixed(2)}`;
-        }
-        
-        if (changeAmount !== 0) {
-          console.log(
-            `%c[${index + 1}] ${purchase.itemName}`,
-            'font-weight: bold; color: blue',
-            `\n 💰 Total Bill: ₹${purchase.amount.toFixed(2)} (Multi-payer)`,
-            `\n 👥 Payers: ${payers}`,
-            `\n 👥 Split among: ${purchase.splitWith.length} people (₹${sharePerPerson.toFixed(2)} each)`,
-            `\n 🧮 ${reason}`,
-            `\n 📈 Running Total: ₹${beforeAmount.toFixed(2)} ${changeAmount >= 0 ? '+' : ''}${changeAmount.toFixed(2)} = ₹${debtorOwesCreditor.toFixed(2)}`
-          );
         }
       } else {
         // Single payer
-        const payerName = purchase.paidById === debt.to.id ? formatName(debt.to.name) : 
-                         purchase.paidById === debt.from.id ? formatName(debt.from.name) : 'Unknown';
-        
         if (purchase.paidById === debt.to.id && purchase.splitWith.includes(debt.from.id)) {
           // Creditor paid, debtor participated → debt increases
           debtorOwesCreditor += sharePerPerson;
-          changeAmount = sharePerPerson;
-          reason = `Creditor paid, Debtor participated = +₹${sharePerPerson.toFixed(2)}`;
-          
-          console.log(
-            `%c[${index + 1}] ${purchase.itemName}`,
-            'font-weight: bold; color: red',
-            `\n 💰 Total Bill: ₹${purchase.amount.toFixed(2)}`,
-            `\n 👤 Payer: ${payerName}`,
-            `\n 👥 Split among: ${purchase.splitWith.length} people (₹${sharePerPerson.toFixed(2)} each)`,
-            `\n 🧮 ${reason}`,
-            `\n 📈 Running Total: ₹${beforeAmount.toFixed(2)} +${changeAmount.toFixed(2)} = ₹${debtorOwesCreditor.toFixed(2)}`
-          );
         } else if (purchase.paidById === debt.from.id && purchase.splitWith.includes(debt.to.id)) {
           // Debtor paid, creditor participated → debt decreases
           debtorOwesCreditor -= sharePerPerson;
-          changeAmount = -sharePerPerson;
-          reason = `Debtor paid, Creditor participated = -₹${sharePerPerson.toFixed(2)}`;
-          
-          console.log(
-            `%c[${index + 1}] ${purchase.itemName}`,
-            'font-weight: bold; color: green',
-            `\n 💰 Total Bill: ₹${purchase.amount.toFixed(2)}`,
-            `\n 👤 Payer: ${payerName}`,
-            `\n 👥 Split among: ${purchase.splitWith.length} people (₹${sharePerPerson.toFixed(2)} each)`,
-            `\n 🧮 ${reason}`,
-            `\n 📈 Running Total: ₹${beforeAmount.toFixed(2)} ${changeAmount.toFixed(2)} = ₹${debtorOwesCreditor.toFixed(2)}`
-          );
         }
       }
     });
     
-    console.log('─'.repeat(80));
-    console.log('%c💵 SETTLEMENTS', 'font-weight: bold; font-size: 12px');
-    console.log('─'.repeat(80));
-    
     // Process all settlements
-    relevantSettlements.forEach((settlement, index) => {
+    relevantSettlements.forEach((settlement) => {
       if (settlement.type === 'settlement') {
-        const beforeAmount = debtorOwesCreditor;
-        
         if (settlement.fromId === debt.from.id && settlement.toId === debt.to.id) {
           // Debtor paid to creditor → debt decreases
           debtorOwesCreditor -= settlement.amount;
-          console.log(
-            `%c[S${index + 1}] Settlement Payment`,
-            'font-weight: bold; color: green',
-            `\n 💰 Amount: ₹${settlement.amount.toFixed(2)}`,
-            `\n 👤 From: ${formatName(debt.from.name)} → ${formatName(debt.to.name)}`,
-            `\n 🧮 Effect: Reduces debt by ₹${settlement.amount.toFixed(2)}`,
-            `\n 📈 Running Total: ₹${beforeAmount.toFixed(2)} -${settlement.amount.toFixed(2)} = ₹${debtorOwesCreditor.toFixed(2)}`
-          );
         } else if (settlement.fromId === debt.to.id && settlement.toId === debt.from.id) {
           // Creditor paid to debtor → debt increases (unusual but possible)
           debtorOwesCreditor += settlement.amount;
-          console.log(
-            `%c[S${index + 1}] Settlement Payment (Reverse)`,
-            'font-weight: bold; color: red',
-            `\n 💰 Amount: ₹${settlement.amount.toFixed(2)}`,
-            `\n 👤 From: ${formatName(debt.to.name)} → ${formatName(debt.from.name)}`,
-            `\n 🧮 Effect: Increases debt by ₹${settlement.amount.toFixed(2)}`,
-            `\n 📈 Running Total: ₹${beforeAmount.toFixed(2)} +${settlement.amount.toFixed(2)} = ₹${debtorOwesCreditor.toFixed(2)}`
-          );
         }
       }
     });
     
-    const finalAmount = Math.max(0, debtorOwesCreditor);
-    
-    console.log('═'.repeat(80));
-    console.log('%c🏁 FINAL CALCULATED OUTSTANDING: ₹' + finalAmount.toFixed(2), 'background: yellow; color: black; font-size: 14px; padding: 4px');
-    console.log('%c🖥️  UI DISPLAYED AMOUNT: ₹' + (debt.amount || 0).toFixed(2), 'background: red; color: white; font-size: 14px; padding: 4px');
-    if (Math.abs(finalAmount - (debt.amount || 0)) > 0.01) {
-      console.log('%c⚠️  DISCREPANCY DETECTED: ₹' + Math.abs(finalAmount - (debt.amount || 0)).toFixed(2), 'background: orange; color: black; font-size: 14px; padding: 4px');
-    }
-    console.groupEnd();
-    
-    return finalAmount; // Can't have negative debt
+    return Math.max(0, debtorOwesCreditor); // Can't have negative debt
   }, [relevantPurchases, relevantSettlements, debt]);
 
   // Calculate amounts

@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Handshake, Eye, Clock } from "lucide-react";
+import { ArrowRight, Handshake, Eye, Clock, Receipt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switcher1 } from "@/components/ui/switcher1";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useUser } from "@/firebase"
+import { PaymentConfirmationModal } from "@/components/payment-confirmation-modal"
 
 /**
  * Helper function to get payment amounts for a purchase
@@ -161,9 +162,17 @@ function calculateTotal(
 
 
 // View debt details dialog component
-function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Transaction[] }) {
+function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; transactions: Transaction[]; onSettleExpense?: (expenseId: string, amount: number, itemName: string, fromId: string, toId: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useUser();
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<{
+    id: string;
+    itemName: string;
+    shareAmount: number;
+    fromId: string;
+    toId: string;
+  } | null>(null);
 
   // Get all purchases related to this debt - BOTH sides of the ledger
   // Type A (Debits/Red): Creditor paid, Debtor participated → increases debt
@@ -268,6 +277,38 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
     
     return Math.max(0, debtorOwesCreditor); // Can't have negative debt
   }, [relevantPurchases, relevantSettlements, debt]);
+
+  // Handler to open payment modal for a specific expense
+  const handleSettleExpenseClick = (
+    expenseId: string,
+    itemName: string,
+    shareAmount: number,
+    fromId: string,
+    toId: string
+  ) => {
+    setSelectedExpense({
+      id: expenseId,
+      itemName,
+      shareAmount,
+      fromId,
+      toId,
+    });
+    setPaymentModalOpen(true);
+  };
+
+  // Handler to confirm payment
+  const handleConfirmPayment = (amount: number) => {
+    if (selectedExpense && onSettleExpense) {
+      onSettleExpense(
+        selectedExpense.id,
+        amount,
+        selectedExpense.itemName,
+        selectedExpense.fromId,
+        selectedExpense.toId
+      );
+      setSelectedExpense(null);
+    }
+  };
 
   // Calculate amounts
   const calculations = useMemo(() => {
@@ -508,6 +549,27 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                           )}
                         </div>
                       </div>
+                      
+                      {/* Settle Button - Visible to Both Parties */}
+                      {onSettleExpense && Math.abs(shareAmount) > 0 && (
+                        <div className="pt-2 border-t mt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs hover:bg-primary/10 hover:text-primary"
+                            onClick={() => handleSettleExpenseClick(
+                              purchase.id,
+                              purchase.itemName,
+                              Math.abs(shareAmount),
+                              debt.from.id,
+                              debt.to.id
+                            )}
+                          >
+                            <Receipt className="mr-1.5 h-3.5 w-3.5" />
+                            Settle This Item
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     );
                   }
@@ -671,6 +733,19 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
           </div>
         </div>
       </DialogContent>
+      
+      {/* Payment Confirmation Modal */}
+      {selectedExpense && (
+        <PaymentConfirmationModal
+          isOpen={paymentModalOpen}
+          onOpenChange={setPaymentModalOpen}
+          itemName={selectedExpense.itemName}
+          shareAmount={selectedExpense.shareAmount}
+          onConfirm={handleConfirmPayment}
+          payerName={user?.uid === selectedExpense.fromId ? formatName(debt.from.name) : formatName(debt.to.name)}
+          recipientName={user?.uid === selectedExpense.fromId ? formatName(debt.to.name) : formatName(debt.from.name)}
+        />
+      )}
     </Dialog>
   );
 }
@@ -680,9 +755,10 @@ interface DebtCardProps {
   debt: Debt;
   onSettle: (debt: Debt, customAmount?: number) => void;
   transactions: Transaction[];
+  onSettleExpense?: (expenseId: string, amount: number, itemName: string, fromId: string, toId: string) => void;
 }
 
-export function DebtCard({ debt, onSettle, transactions }: DebtCardProps) {
+export function DebtCard({ debt, onSettle, transactions, onSettleExpense }: DebtCardProps) {
   const { from, to, amount } = debt;
   const { user } = useUser();
   const [customAmount, setCustomAmount] = useState<string>(amount.toFixed(2));
@@ -690,8 +766,9 @@ export function DebtCard({ debt, onSettle, transactions }: DebtCardProps) {
 
   const formattedAmount = formatCurrency(amount);
   
-  // Check if current user can settle this debt (they must be the one who owes)
-  const canSettle = user?.uid === from.id;
+  // Check if current user is involved in this debt (either debtor or creditor)
+  const canSettle = user?.uid === from.id || user?.uid === to.id;
+  const isDebtor = user?.uid === from.id;
 
   const handleSettle = () => {
     if (useCustomAmount) {
@@ -745,7 +822,7 @@ export function DebtCard({ debt, onSettle, transactions }: DebtCardProps) {
         </div>
         
         {/* View Details Button - shown to all users */}
-        <ViewDebtDialog debt={debt} transactions={transactions} />
+        <ViewDebtDialog debt={debt} transactions={transactions} onSettleExpense={onSettleExpense} />
         
         {/* Settle Button - only shown to user who owes money */}
         {canSettle ? (

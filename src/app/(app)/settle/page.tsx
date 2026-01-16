@@ -57,6 +57,35 @@ export default function SettleUpPage() {
     }
   };
 
+  const handleSettleExpense = async (
+    expenseId: string,
+    amount: number,
+    itemName: string,
+    fromId: string,
+    toId: string
+  ) => {
+    if (!user) return;
+    
+    try {
+      const settlementData: Omit<Settlement, 'id'> = {
+        type: "settlement",
+        fromId: fromId,
+        toId: toId,
+        amount: amount,
+        date: new Date().toISOString(),
+        relatedExpenseId: expenseId,
+        description: `Settlement for ${itemName}`,
+      };
+      
+      await createSettlement(firestore, user.uid, settlementData);
+      
+      toast.success("Item Settled!", `Settlement of ₹${amount.toFixed(2)} recorded for ${itemName}.`);
+    } catch (error) {
+      console.error('Error settling expense:', error);
+      toast.error("Error", "Failed to settle expense. Please try again.");
+    }
+  };
+
   if (purchasesLoading || settlementsLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -81,7 +110,7 @@ export default function SettleUpPage() {
               className="animate-slide-in-right"
               style={{animationDelay: `${index * 0.1}s`}}
             >
-              <DebtCard debt={debt} onSettle={handleSettle} transactions={transactions} />
+              <DebtCard debt={debt} onSettle={handleSettle} transactions={transactions} onSettleExpense={handleSettleExpense} />
             </div>
           ))}
         </div>

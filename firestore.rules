@@ -106,19 +106,24 @@ service cloud.firestore {
     }
 
     /**
-     * Validates that the settlement is being created by the user who is making the payment.
+     * Validates that the settlement is being created by the user who is making the payment (fromId)
+     * OR by the user who is receiving the payment (toId) for bi-directional settlement support.
      */
     function isCreatingValidSettlement() {
-      return isSignedIn() && request.resource.data.fromId == request.auth.uid;
+      return isSignedIn() && (
+        request.resource.data.fromId == request.auth.uid ||
+        request.resource.data.toId == request.auth.uid
+      );
     }
 
     /**
-     * Validates that the settlement is being updated by the user who paid,
+     * Validates that the settlement is being updated by the user who paid (fromId)
+     * OR by the user who received the payment (toId) for bi-directional settlement support,
      * and that the fromId field is not being changed.
      */
     function isUpdatingValidSettlement() {
       return isSignedIn()
-        && resource.data.fromId == request.auth.uid
+        && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid)
         && request.resource.data.fromId == resource.data.fromId;
     }
 
@@ -156,15 +161,15 @@ service cloud.firestore {
      * @description Rules for shared settlement records.
      * @path /settlements/{settlementId}
      * @allow (read) All authenticated users can read settlements for balance calculations.
-     * @allow (create) Authenticated users can create settlements they are paying.
-     * @allow (update/delete) Only the user who paid can update/delete their settlement.
+     * @allow (create) Authenticated users can create settlements where they are either the payer (fromId) or recipient (toId).
+     * @allow (update/delete) Either the payer or recipient can update/delete the settlement for bi-directional support.
      */
     match /settlements/{settlementId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isCreatingValidSettlement();
       allow update: if isUpdatingValidSettlement();
-      allow delete: if isSignedIn() && resource.data.fromId == request.auth.uid;
+      allow delete: if isSignedIn() && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
     }
 
     /**

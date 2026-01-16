@@ -204,17 +204,24 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
       
       if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
         // Multi-payer: Calculate what each participant owes to each payer
-        const creditorPaid = purchase.paidByAmounts[debt.to.id] || 0;
-        const debtorPaid = purchase.paidByAmounts[debt.from.id] || 0;
+        // This follows the same logic as src/lib/logic.ts
         
-        // Debtor's share of what creditor paid
-        if (creditorPaid > 0 && purchase.splitWith.includes(debt.from.id)) {
-          debtorOwesCreditor += creditorPaid / purchase.splitWith.length;
+        // For the creditor: if they paid, calculate what the debtor owes them
+        const creditorPaid = purchase.paidByAmounts[debt.to.id] || 0;
+        if (creditorPaid > 0 && purchase.splitWith.includes(debt.from.id) && debt.from.id !== debt.to.id) {
+          // Debtor owes creditor their share of what creditor paid
+          // Share = (amount creditor paid) / (number of people splitting)
+          const debtorShareOfCreditorPayment = creditorPaid / purchase.splitWith.length;
+          debtorOwesCreditor += debtorShareOfCreditorPayment;
         }
         
-        // Creditor's share of what debtor paid (reduces debt)
-        if (debtorPaid > 0 && purchase.splitWith.includes(debt.to.id)) {
-          debtorOwesCreditor -= debtorPaid / purchase.splitWith.length;
+        // For the debtor: if they paid, calculate what the creditor owes them (reduces debt)
+        const debtorPaid = purchase.paidByAmounts[debt.from.id] || 0;
+        if (debtorPaid > 0 && purchase.splitWith.includes(debt.to.id) && debt.from.id !== debt.to.id) {
+          // Creditor owes debtor their share of what debtor paid
+          // This reduces the overall debt from debtor to creditor
+          const creditorShareOfDebtorPayment = debtorPaid / purchase.splitWith.length;
+          debtorOwesCreditor -= creditorShareOfDebtorPayment;
         }
       } else {
         // Single payer
@@ -366,11 +373,31 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                   
                   // Calculate payment amounts and shares
                   const { expenseFromPaid, expenseToPaid } = getPaymentAmounts(purchase, debt.from.id, debt.to.id);
-                  const fromShare = purchase.splitWith.includes(debt.from.id) ? sharePerPerson : 0;
-                  const toShare = purchase.splitWith.includes(debt.to.id) ? sharePerPerson : 0;
+                  
+                  // For multi-payer, calculate the SPECIFIC debt between these two users
+                  let debtorOwesToCreditor = 0; // What debtor owes creditor for THIS transaction
+                  let creditorOwesToDebtor = 0; // What creditor owes debtor for THIS transaction
+                  
+                  if (purchase.paymentType === 'multiple' && purchase.paidByAmounts) {
+                    // If creditor paid, calculate what debtor owes creditor
+                    if (expenseToPaid > 0 && purchase.splitWith.includes(debt.from.id) && debt.from.id !== debt.to.id) {
+                      debtorOwesToCreditor = expenseToPaid / purchase.splitWith.length;
+                    }
+                    // If debtor paid, calculate what creditor owes debtor
+                    if (expenseFromPaid > 0 && purchase.splitWith.includes(debt.to.id) && debt.from.id !== debt.to.id) {
+                      creditorOwesToDebtor = expenseFromPaid / purchase.splitWith.length;
+                    }
+                  } else {
+                    // Single payer scenario
+                    if (purchase.paidById === debt.to.id && purchase.splitWith.includes(debt.from.id)) {
+                      debtorOwesToCreditor = sharePerPerson;
+                    } else if (purchase.paidById === debt.from.id && purchase.splitWith.includes(debt.to.id)) {
+                      creditorOwesToDebtor = sharePerPerson;
+                    }
+                  }
                   
                   // Determine transaction type using helper
-                  const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, fromShare, toShare);
+                  const transactionType = getTransactionType(expenseFromPaid, expenseToPaid, debtorOwesToCreditor, creditorOwesToDebtor);
                   
                   // Skip third-party transactions
                   if (transactionType === 'third-party') {
@@ -384,21 +411,21 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                     borderColor = 'border-red-500/20';
                     textColor = 'text-red-600';
                     label = `Paid by ${formatName(debt.to.name)}`;
-                    shareAmount = fromShare; // Debtor's share
+                    shareAmount = debtorOwesToCreditor; // What debtor owes creditor
                   } else if (transactionType === 'credit') {
                     // Green entry: Debt decreases
                     bgColor = 'bg-green-500/5';
                     borderColor = 'border-green-500/20';
                     textColor = 'text-green-600';
                     label = `Paid by ${formatName(debt.from.name)}`;
-                    shareAmount = toShare; // Creditor's share (reduces debt)
+                    shareAmount = creditorOwesToDebtor; // What creditor owes debtor (reduces debt)
                   } else {
                     // Mixed: Both paid - show net effect
                     bgColor = 'bg-blue-500/5';
                     borderColor = 'border-blue-500/20';
                     textColor = 'text-blue-600';
                     label = `Paid by both`;
-                    shareAmount = fromShare - toShare; // Net effect on debt (positive increases, negative decreases)
+                    shareAmount = debtorOwesToCreditor - creditorOwesToDebtor; // Net effect on debt (positive increases, negative decreases)
                   }
                   
                   return (
@@ -452,12 +479,12 @@ function ViewDebtDialog({ debt, transactions }: { debt: Debt; transactions: Tran
                                 <span>{formatCurrency(expenseToPaid)}</span>
                               </div>
                               <div className="flex justify-between mt-1 pt-1 border-t border-dashed">
-                                <span>{formatName(debt.from.name)}'s share:</span>
-                                <span>{formatCurrency(fromShare)}</span>
+                                <span>{formatName(debt.from.name)} owes {formatName(debt.to.name)}:</span>
+                                <span>{formatCurrency(debtorOwesToCreditor)}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span>{formatName(debt.to.name)}'s share:</span>
-                                <span>{formatCurrency(toShare)}</span>
+                                <span>{formatName(debt.to.name)} owes {formatName(debt.from.name)}:</span>
+                                <span>{formatCurrency(creditorOwesToDebtor)}</span>
                               </div>
                             </div>
                           )}

@@ -21,13 +21,18 @@ export default function ExpenseLogPage() {
   const { users, isLoading: usersLoading } = useUsers();
   
   // Combine purchases and settlements into transactions
+  // Filter out item-specific settlements (those with relatedExpenseId) to avoid duplication
+  // These settlements are now represented by the visual state of their parent expense
   const transactions = useMemo(() => {
     const allTransactions: Transaction[] = [];
     if (purchases) {
       allTransactions.push(...purchases);
     }
     if (settlements) {
-      allTransactions.push(...settlements);
+      // Only include settlements that are NOT linked to a specific expense
+      // Linked settlements are shown via the expense's "PAID" status
+      const generalSettlements = settlements.filter(s => !s.relatedExpenseId);
+      allTransactions.push(...generalSettlements);
     }
     // Sort by date, most recent first
     return allTransactions.sort((a, b) => 

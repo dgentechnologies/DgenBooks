@@ -387,10 +387,11 @@ export const createColumns = (users: User[], settlements: Settlement[]): ColumnD
         // Check if this expense has any settlements
         const expenseSettlements = settlementsByExpenseId.get(transaction.id) || [];
         const totalPaid = expenseSettlements.reduce((sum, s) => sum + s.amount, 0);
-        const sharePerPerson = transaction.amount / transaction.splitWith.length;
         
-        // For simplicity in the list view, we consider it fully paid if total settlements >= total amount
-        // This is a simplified view - the detailed view in ViewDebtDialog is more accurate
+        // Simplified settlement status for the list view
+        // We mark as "fully paid" when total settlements >= total expense amount
+        // Note: This is an approximation - in reality, different people may have different
+        // settlement statuses. For accurate per-person status, see the debt details dialog.
         const isFullyPaid = totalPaid >= transaction.amount;
         const isPartiallyPaid = totalPaid > 0 && totalPaid < transaction.amount;
         

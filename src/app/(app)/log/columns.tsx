@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import type { Transaction, User, Purchase, Settlement } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpDown, Pencil, Trash2, Eye } from "lucide-react"
+import { ArrowUpDown, Pencil, Trash2, Eye, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -27,6 +27,7 @@ import { toast } from "@/lib/toast"
 import { useState, useMemo } from "react"
 import { getCategoryIcon } from "@/lib/category-icons"
 import { formatName, formatCurrency } from "@/lib/format"
+import { createSettlementsByExpenseMap } from "@/lib/settlement-status"
 
 // Action cell component for edit and delete
 function ActionCell({ transaction }: { transaction: Transaction }) {
@@ -351,8 +352,11 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
 }
 
 
-export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
+export const createColumns = (users: User[], settlements: Settlement[]): ColumnDef<Transaction>[] => {
   const getUser = (id: string): User | undefined => users.find(u => u.id === id);
+  
+  // Create a map of settlements by expense ID for quick lookup
+  const settlementsByExpenseId = createSettlementsByExpenseMap(settlements);
   
   return [
   {
@@ -379,15 +383,39 @@ export const createColumns = (users: User[]): ColumnDef<Transaction>[] => {
       const transaction = row.original;
       if (transaction.type === 'purchase') {
         const CategoryIcon = getCategoryIcon(transaction.category);
+        
+        // Check if this expense has any settlements
+        const expenseSettlements = settlementsByExpenseId.get(transaction.id) || [];
+        const totalPaid = expenseSettlements.reduce((sum, s) => sum + s.amount, 0);
+        const sharePerPerson = transaction.amount / transaction.splitWith.length;
+        
+        // For simplicity in the list view, we consider it fully paid if total settlements >= total amount
+        // This is a simplified view - the detailed view in ViewDebtDialog is more accurate
+        const isFullyPaid = totalPaid >= transaction.amount;
+        const isPartiallyPaid = totalPaid > 0 && totalPaid < transaction.amount;
+        
         return (
             <div className="flex items-center gap-2">
-                <div className="rounded-full p-1.5 bg-accent/10 flex-shrink-0">
+                <div className={`rounded-full p-1.5 bg-accent/10 flex-shrink-0 ${isFullyPaid ? 'opacity-60' : ''}`}>
                   <CategoryIcon className="h-4 w-4 text-accent" />
                 </div>
-                <div>
-                  <div className="font-medium">{transaction.itemName}</div>
+                <div className={isFullyPaid ? 'opacity-60' : ''}>
+                  <div className={`font-medium ${isFullyPaid ? 'line-through' : ''}`}>
+                    {transaction.itemName}
+                  </div>
                   <div className="text-sm text-muted-foreground">{transaction.category}</div>
+                  {isPartiallyPaid && (
+                    <div className="text-xs text-amber-600 font-medium mt-0.5">
+                      ₹{(transaction.amount - totalPaid).toFixed(2)} remaining
+                    </div>
+                  )}
                 </div>
+                {isFullyPaid && (
+                  <Badge variant="default" className="ml-auto bg-green-600 hover:bg-green-700 text-white">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    PAID
+                  </Badge>
+                )}
             </div>
         )
       }

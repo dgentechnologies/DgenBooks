@@ -550,24 +550,32 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
                         </div>
                       </div>
                       
-                      {/* Settle Button - Visible to Both Parties */}
+                      {/* Settle Button - Conditional based on transaction type */}
                       {onSettleExpense && Math.abs(shareAmount) > 0 && (
                         <div className="pt-2 border-t mt-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-xs hover:bg-primary/10 hover:text-primary"
-                            onClick={() => handleSettleExpenseClick(
-                              purchase.id,
-                              purchase.itemName,
-                              Math.abs(shareAmount),
-                              debt.from.id,
-                              debt.to.id
-                            )}
-                          >
-                            <Receipt className="mr-1.5 h-3.5 w-3.5" />
-                            Settle This Item
-                          </Button>
+                          {transactionType === 'credit' ? (
+                            // Green Row: Show "Auto-deducted" label instead of settle button
+                            <div className="text-xs text-green-600 text-center py-2 bg-green-500/5 rounded">
+                              ✓ Auto-deducted from total outstanding
+                            </div>
+                          ) : (
+                            // Red/Mixed Row: Show settle button
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-xs hover:bg-primary/10 hover:text-primary"
+                              onClick={() => handleSettleExpenseClick(
+                                purchase.id,
+                                purchase.itemName,
+                                Math.abs(shareAmount),
+                                debt.from.id,
+                                debt.to.id
+                              )}
+                            >
+                              <Receipt className="mr-1.5 h-3.5 w-3.5" />
+                              Settle This Item
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>

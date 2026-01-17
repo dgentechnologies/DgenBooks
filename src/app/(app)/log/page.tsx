@@ -59,8 +59,8 @@ export default function ExpenseLogPage() {
     return transactions;
   }, [transactions, filter, user]);
   
-  // Create columns with Firebase users
-  const columns = useMemo(() => createColumns(users), [users]);
+  // Create columns with Firebase users and settlements
+  const columns = useMemo(() => createColumns(users, settlements || []), [users, settlements]);
 
   if (purchasesLoading || settlementsLoading || usersLoading) {
     return (

@@ -20,9 +20,8 @@ export default function ExpenseLogPage() {
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
   const { users, isLoading: usersLoading } = useUsers();
   
-  // Combine purchases and settlements into transactions
-  // Filter out item-specific settlements (those with relatedExpenseId) to avoid duplication
-  // These settlements are now represented by the visual state of their parent expense
+  // THREE-STEP PIPELINE for Visual Merging
+  // This ensures settlements with relatedExpenseId are hidden AND their parent expenses are marked as settled
   const transactions = useMemo(() => {
     const allTransactions: Transaction[] = [];
     
@@ -31,54 +30,9 @@ export default function ExpenseLogPage() {
       allTransactions.push(...purchases);
     }
     
-    // Add only settlements that are NOT linked to a specific expense
-    // This prevents visual duplication where a settled item appears twice
+    // Add settlements (we'll filter them in the next step)
     if (settlements) {
-      // Create a Set of expense IDs that have related settlements (for debugging)
-      const settledExpenseIds = new Set(
-        settlements
-          .filter(s => s.relatedExpenseId) // Only settlements with related expense
-          .map(s => String(s.relatedExpenseId)) // Force string cast for consistency
-      );
-      
-      // Debug logging to verify the filtering is working
-      if (process.env.NODE_ENV === 'development' && settledExpenseIds.size > 0) {
-        console.log('🔗 Settlement Link Debug:', {
-          totalSettlements: settlements.length,
-          linkedSettlements: settledExpenseIds.size,
-          settledExpenseIds: Array.from(settledExpenseIds),
-        });
-      }
-      
-      // Filter: Only include settlements WITHOUT a relatedExpenseId
-      // These are general debt settlements, not item-specific ones
-      const generalSettlements = settlements.filter(s => {
-        const hasRelatedId = !!s.relatedExpenseId;
-        
-        // Debug individual settlement filtering
-        if (process.env.NODE_ENV === 'development' && hasRelatedId) {
-          console.log('🚫 Filtering out linked settlement:', {
-            settlementId: s.id,
-            relatedExpenseId: s.relatedExpenseId,
-            type: typeof s.relatedExpenseId,
-          });
-        }
-        
-        // Return true ONLY if there's NO relatedExpenseId
-        return !hasRelatedId;
-      });
-      
-      allTransactions.push(...generalSettlements);
-      
-      // Debug final counts
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📊 Transaction List Stats:', {
-          purchases: purchases?.length || 0,
-          totalSettlements: settlements.length,
-          filteredSettlements: generalSettlements.length,
-          finalTransactionCount: allTransactions.length,
-        });
-      }
+      allTransactions.push(...settlements);
     }
     
     // Sort by date, most recent first
@@ -87,35 +41,82 @@ export default function ExpenseLogPage() {
     );
   }, [purchases, settlements]);
 
-  const filteredTransactions = useMemo(() => {
-    // Additional safety filter: Remove any settlements with relatedExpenseId that might have slipped through
-    // This is a defensive measure to ensure visual duplication never occurs
-    let baseTransactions = transactions.filter(t => {
-      // If it's a settlement with a relatedExpenseId, it should NOT be visible
-      if (t.type === 'settlement' && t.relatedExpenseId) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('⚠️ Settlement with relatedExpenseId found in transactions list (should be filtered):', {
-            id: t.id,
-            relatedExpenseId: t.relatedExpenseId,
-          });
-        }
-        return false; // Hide it
-      }
-      return true; // Show everything else
-    });
+  // STEP 1: Create a "Lookup Set" of all settled expense IDs
+  // Force conversion to String to prevent type errors
+  const settledExpenseIds = useMemo(() => {
+    const ids = new Set(
+      transactions
+        .filter(t => t.type === 'settlement' && t.relatedExpenseId)
+        .map(t => String(t.relatedExpenseId))
+    );
     
+    if (process.env.NODE_ENV === 'development' && ids.size > 0) {
+      console.log('🔗 DEBUG: Settled IDs Found:', Array.from(ids));
+    }
+    
+    return ids;
+  }, [transactions]);
+
+  // STEP 2: Derive the Final List with two rules:
+  // RULE 1: Hide Settlement rows that are linked to an expense
+  // RULE 2: Mark Expense rows as settled if they have a linked settlement
+  const derivedTransactions = useMemo(() => {
+    const derived = transactions
+      .filter(t => {
+        // RULE 1: Hide Settlement rows with relatedExpenseId
+        if (t.type === 'settlement' && t.relatedExpenseId) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🚫 Filtering out linked settlement:', {
+              settlementId: t.id,
+              relatedExpenseId: t.relatedExpenseId,
+              type: typeof t.relatedExpenseId,
+            });
+          }
+          return false;
+        }
+        return true;
+      })
+      .map(t => {
+        // RULE 2: Mark Expense rows as settled
+        if (t.type === 'purchase' && settledExpenseIds.has(String(t.id))) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Marking expense as settled:', {
+              expenseId: t.id,
+              itemName: t.itemName,
+            });
+          }
+          return { ...t, isSettled: true };
+        }
+        return t;
+      });
+    
+    // Debug final results
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Render Debug:', {
+        totalRaw: transactions.length,
+        settledSetSize: settledExpenseIds.size,
+        derivedCount: derived.length,
+        sampleSettled: derived.find(t => t.type === 'purchase' && (t as any).isSettled),
+      });
+    }
+    
+    return derived;
+  }, [transactions, settledExpenseIds]);
+
+  const filteredTransactions = useMemo(() => {
+    // Apply user-specific filters to the derived transaction list
     if (filter === 'all') {
-      return baseTransactions;
+      return derivedTransactions;
     }
     
     if (filter === 'my-spending') {
       // Show only expenses paid by current user
-      return baseTransactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+      return derivedTransactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
     }
     
     if (filter === 'involved') {
       // Show expenses where user is involved (in splitWith array)
-      return baseTransactions.filter(t => {
+      return derivedTransactions.filter(t => {
         if (t.type === 'purchase') {
           return t.splitWith.includes(user?.uid || '');
         }
@@ -124,8 +125,8 @@ export default function ExpenseLogPage() {
       });
     }
     
-    return baseTransactions;
-  }, [transactions, filter, user]);
+    return derivedTransactions;
+  }, [derivedTransactions, filter, user]);
   
   // Create columns with Firebase users and settlements
   const columns = useMemo(() => createColumns(users, settlements || []), [users, settlements]);

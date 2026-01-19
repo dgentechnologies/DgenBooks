@@ -25,15 +25,62 @@ export default function ExpenseLogPage() {
   // These settlements are now represented by the visual state of their parent expense
   const transactions = useMemo(() => {
     const allTransactions: Transaction[] = [];
+    
+    // Add all purchases
     if (purchases) {
       allTransactions.push(...purchases);
     }
+    
+    // Add only settlements that are NOT linked to a specific expense
+    // This prevents visual duplication where a settled item appears twice
     if (settlements) {
-      // Only include settlements that are NOT linked to a specific expense
-      // Linked settlements are shown via the expense's "PAID" status
-      const generalSettlements = settlements.filter(s => !s.relatedExpenseId);
+      // Create a Set of expense IDs that have related settlements (for debugging)
+      const settledExpenseIds = new Set(
+        settlements
+          .filter(s => s.relatedExpenseId) // Only settlements with related expense
+          .map(s => String(s.relatedExpenseId)) // Force string cast for consistency
+      );
+      
+      // Debug logging to verify the filtering is working
+      if (process.env.NODE_ENV === 'development' && settledExpenseIds.size > 0) {
+        console.log('🔗 Settlement Link Debug:', {
+          totalSettlements: settlements.length,
+          linkedSettlements: settledExpenseIds.size,
+          settledExpenseIds: Array.from(settledExpenseIds),
+        });
+      }
+      
+      // Filter: Only include settlements WITHOUT a relatedExpenseId
+      // These are general debt settlements, not item-specific ones
+      const generalSettlements = settlements.filter(s => {
+        const hasRelatedId = !!s.relatedExpenseId;
+        
+        // Debug individual settlement filtering
+        if (process.env.NODE_ENV === 'development' && hasRelatedId) {
+          console.log('🚫 Filtering out linked settlement:', {
+            settlementId: s.id,
+            relatedExpenseId: s.relatedExpenseId,
+            type: typeof s.relatedExpenseId,
+          });
+        }
+        
+        // Return true ONLY if there's NO relatedExpenseId
+        return !hasRelatedId;
+      });
+      
       allTransactions.push(...generalSettlements);
+      
+      // Debug final counts
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Transaction List Stats:', {
+          purchases: purchases?.length || 0,
+          totalSettlements: settlements.length,
+          filteredSettlements: generalSettlements.length,
+          finalTransactionCount: allTransactions.length,
+        });
+      }
     }
+    
     // Sort by date, most recent first
     return allTransactions.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -41,18 +88,34 @@ export default function ExpenseLogPage() {
   }, [purchases, settlements]);
 
   const filteredTransactions = useMemo(() => {
+    // Additional safety filter: Remove any settlements with relatedExpenseId that might have slipped through
+    // This is a defensive measure to ensure visual duplication never occurs
+    let baseTransactions = transactions.filter(t => {
+      // If it's a settlement with a relatedExpenseId, it should NOT be visible
+      if (t.type === 'settlement' && t.relatedExpenseId) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('⚠️ Settlement with relatedExpenseId found in transactions list (should be filtered):', {
+            id: t.id,
+            relatedExpenseId: t.relatedExpenseId,
+          });
+        }
+        return false; // Hide it
+      }
+      return true; // Show everything else
+    });
+    
     if (filter === 'all') {
-      return transactions;
+      return baseTransactions;
     }
     
     if (filter === 'my-spending') {
       // Show only expenses paid by current user
-      return transactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+      return baseTransactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
     }
     
     if (filter === 'involved') {
       // Show expenses where user is involved (in splitWith array)
-      return transactions.filter(t => {
+      return baseTransactions.filter(t => {
         if (t.type === 'purchase') {
           return t.splitWith.includes(user?.uid || '');
         }
@@ -61,7 +124,7 @@ export default function ExpenseLogPage() {
       });
     }
     
-    return transactions;
+    return baseTransactions;
   }, [transactions, filter, user]);
   
   // Create columns with Firebase users and settlements

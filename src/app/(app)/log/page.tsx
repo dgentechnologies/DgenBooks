@@ -20,34 +20,87 @@ export default function ExpenseLogPage() {
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
   const { users, isLoading: usersLoading } = useUsers();
   
-  // Combine purchases and settlements into transactions
+  // THREE-STEP PIPELINE for Visual Merging (Modified for Expense Log)
+  // In the expense log, we want to show BOTH the crossed-out expense AND the settlement row
   const transactions = useMemo(() => {
     const allTransactions: Transaction[] = [];
+    
+    // Add all purchases
     if (purchases) {
       allTransactions.push(...purchases);
     }
+    
+    // Add all settlements (including those with relatedExpenseId)
     if (settlements) {
       allTransactions.push(...settlements);
     }
+    
     // Sort by date, most recent first
     return allTransactions.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [purchases, settlements]);
 
+  // STEP 1: Create a "Lookup Set" of all settled expense IDs
+  // Force conversion to String to prevent type errors
+  const settledExpenseIds = useMemo(() => {
+    const ids = new Set(
+      transactions
+        .filter(t => t.type === 'settlement' && t.relatedExpenseId)
+        .map(t => String(t.relatedExpenseId))
+    );
+    
+    if (process.env.NODE_ENV === 'development' && ids.size > 0) {
+      console.log('🔗 DEBUG: Settled IDs Found:', Array.from(ids));
+    }
+    
+    return ids;
+  }, [transactions]);
+
+  // STEP 2: Mark Expense rows as settled (but don't filter out settlements)
+  // In the expense log, we want to show both the expense AND the settlement
+  const derivedTransactions = useMemo(() => {
+    const derived = transactions.map(t => {
+      // Mark Expense rows as settled if they have a linked settlement
+      if (t.type === 'purchase' && settledExpenseIds.has(String(t.id))) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Marking expense as settled:', {
+            expenseId: t.id,
+            itemName: t.itemName,
+          });
+        }
+        return { ...t, isSettled: true };
+      }
+      return t;
+    });
+    
+    // Debug final results
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Render Debug:', {
+        totalRaw: transactions.length,
+        settledSetSize: settledExpenseIds.size,
+        derivedCount: derived.length,
+        sampleSettled: derived.find(t => t.type === 'purchase' && (t as any).isSettled),
+      });
+    }
+    
+    return derived;
+  }, [transactions, settledExpenseIds]);
+
   const filteredTransactions = useMemo(() => {
+    // Apply user-specific filters to the derived transaction list
     if (filter === 'all') {
-      return transactions;
+      return derivedTransactions;
     }
     
     if (filter === 'my-spending') {
       // Show only expenses paid by current user
-      return transactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+      return derivedTransactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
     }
     
     if (filter === 'involved') {
       // Show expenses where user is involved (in splitWith array)
-      return transactions.filter(t => {
+      return derivedTransactions.filter(t => {
         if (t.type === 'purchase') {
           return t.splitWith.includes(user?.uid || '');
         }
@@ -56,11 +109,11 @@ export default function ExpenseLogPage() {
       });
     }
     
-    return transactions;
-  }, [transactions, filter, user]);
+    return derivedTransactions;
+  }, [derivedTransactions, filter, user]);
   
-  // Create columns with Firebase users
-  const columns = useMemo(() => createColumns(users), [users]);
+  // Create columns with Firebase users and settlements
+  const columns = useMemo(() => createColumns(users, settlements || []), [users, settlements]);
 
   if (purchasesLoading || settlementsLoading || usersLoading) {
     return (

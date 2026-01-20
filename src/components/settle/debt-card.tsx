@@ -212,14 +212,43 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
     });
   }, [transactions, debt]);
 
-  // Combine purchases and settlements, then sort by date (newest first)
-  const allTransactions = useMemo(() => {
+  // THREE-STEP PIPELINE for Visual Merging in Dialog
+  // Step 1: Combine purchases and settlements
+  const combinedTransactions = useMemo(() => {
     const combined = [
       ...relevantPurchases.map(p => ({ ...p, sortDate: new Date(p.date).getTime() })),
       ...relevantSettlements.map(s => ({ ...s, sortDate: new Date(s.date).getTime() }))
     ];
     return combined.sort((a, b) => b.sortDate - a.sortDate);
   }, [relevantPurchases, relevantSettlements]);
+
+  // Step 2: Create a Set of expense IDs that have related settlements
+  const settledExpenseIds = useMemo(() => {
+    return new Set(
+      relevantSettlements
+        .filter(s => s.relatedExpenseId) // Only settlements with related expense
+        .map(s => String(s.relatedExpenseId)) // Force string cast
+    );
+  }, [relevantSettlements]);
+
+  // Step 3: Apply filtering and marking
+  const allTransactions = useMemo(() => {
+    return combinedTransactions
+      .filter(t => {
+        // RULE 1: Hide Settlement rows with relatedExpenseId (they're merged into expense row)
+        if (t.type === 'settlement' && t.relatedExpenseId) {
+          return false;
+        }
+        return true;
+      })
+      .map(t => {
+        // RULE 2: Mark expense rows as settled if they have a linked settlement
+        if (t.type === 'purchase' && settledExpenseIds.has(String(t.id))) {
+          return { ...t, isSettled: true };
+        }
+        return t;
+      });
+  }, [combinedTransactions, settledExpenseIds]);
 
   // Client-side reconciliation: Calculate the actual outstanding amount from visible transactions
   const calculatedOutstanding = useMemo(() => {
@@ -462,6 +491,10 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
                   if (transactionType === 'third-party') {
                     return null;
                   }
+                  
+                  // Check if this expense is settled (has a linked settlement)
+                  const isSettled = (transaction as any).isSettled || false;
+                  
                   // Determine display properties based on transaction type
                   let bgColor, borderColor, textColor, label, shareAmount;
                   if (transactionType === 'debit') {
@@ -488,14 +521,14 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
                   }
                   
                   return (
-                    <div key={purchase.id} className="border rounded-lg p-3 bg-muted/30">
+                    <div key={purchase.id} className={`border rounded-lg p-3 bg-muted/30 ${isSettled ? 'opacity-60' : ''}`}>
                       {/* Expense Header */}
                       <div className="flex items-start gap-2 mb-3">
                         <div className="rounded-full p-1.5 bg-accent/10 flex-shrink-0 mt-0.5">
                           <CategoryIcon className="h-3 w-3 text-accent" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{purchase.itemName}</p>
+                          <p className={`font-medium text-sm truncate ${isSettled ? 'line-through' : ''}`}>{purchase.itemName}</p>
                           <p className="text-xs text-muted-foreground">{purchase.category}</p>
                           <p className="text-xs font-medium text-primary mt-1">{label}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -505,6 +538,9 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
                               year: 'numeric'
                             })}
                           </p>
+                          {isSettled && (
+                            <p className="text-xs text-green-600 font-medium mt-1">✓ Settled</p>
+                          )}
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="font-semibold text-sm">{formatCurrency(purchase.amount)}</p>
@@ -550,24 +586,37 @@ function ViewDebtDialog({ debt, transactions, onSettleExpense }: { debt: Debt; t
                         </div>
                       </div>
                       
-                      {/* Settle Button - Visible to Both Parties */}
+                      {/* Settle Button - Conditional based on transaction type and settlement status */}
                       {onSettleExpense && Math.abs(shareAmount) > 0 && (
                         <div className="pt-2 border-t mt-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-xs hover:bg-primary/10 hover:text-primary"
-                            onClick={() => handleSettleExpenseClick(
-                              purchase.id,
-                              purchase.itemName,
-                              Math.abs(shareAmount),
-                              debt.from.id,
-                              debt.to.id
-                            )}
-                          >
-                            <Receipt className="mr-1.5 h-3.5 w-3.5" />
-                            Settle This Item
-                          </Button>
+                          {isSettled ? (
+                            // Settled: Show "PAID" indicator
+                            <div className="text-xs text-green-600 text-center py-2 bg-green-500/5 rounded font-medium">
+                              ✓ PAID - Settlement recorded
+                            </div>
+                          ) : transactionType === 'credit' ? (
+                            // Green Row: Show "Auto-deducted" label instead of settle button
+                            <div className="text-xs text-green-600 text-center py-2 bg-green-500/5 rounded">
+                              ✓ Auto-deducted from total outstanding
+                            </div>
+                          ) : (
+                            // Red/Mixed Row: Show settle button
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-xs hover:bg-primary/10 hover:text-primary"
+                              onClick={() => handleSettleExpenseClick(
+                                purchase.id,
+                                purchase.itemName,
+                                Math.abs(shareAmount),
+                                debt.from.id,
+                                debt.to.id
+                              )}
+                            >
+                              <Receipt className="mr-1.5 h-3.5 w-3.5" />
+                              Settle This Item
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>

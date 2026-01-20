@@ -20,8 +20,8 @@ export default function ExpenseLogPage() {
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
   const { users, isLoading: usersLoading } = useUsers();
   
-  // THREE-STEP PIPELINE for Visual Merging
-  // This ensures settlements with relatedExpenseId are hidden AND their parent expenses are marked as settled
+  // THREE-STEP PIPELINE for Visual Merging (Modified for Expense Log)
+  // In the expense log, we want to show BOTH the crossed-out expense AND the settlement row
   const transactions = useMemo(() => {
     const allTransactions: Transaction[] = [];
     
@@ -30,7 +30,7 @@ export default function ExpenseLogPage() {
       allTransactions.push(...purchases);
     }
     
-    // Add settlements (we'll filter them in the next step)
+    // Add all settlements (including those with relatedExpenseId)
     if (settlements) {
       allTransactions.push(...settlements);
     }
@@ -57,38 +57,22 @@ export default function ExpenseLogPage() {
     return ids;
   }, [transactions]);
 
-  // STEP 2: Derive the Final List with two rules:
-  // RULE 1: Hide Settlement rows that are linked to an expense
-  // RULE 2: Mark Expense rows as settled if they have a linked settlement
+  // STEP 2: Mark Expense rows as settled (but don't filter out settlements)
+  // In the expense log, we want to show both the expense AND the settlement
   const derivedTransactions = useMemo(() => {
-    const derived = transactions
-      .filter(t => {
-        // RULE 1: Hide Settlement rows with relatedExpenseId
-        if (t.type === 'settlement' && t.relatedExpenseId) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🚫 Filtering out linked settlement:', {
-              settlementId: t.id,
-              relatedExpenseId: t.relatedExpenseId,
-              type: typeof t.relatedExpenseId,
-            });
-          }
-          return false;
+    const derived = transactions.map(t => {
+      // Mark Expense rows as settled if they have a linked settlement
+      if (t.type === 'purchase' && settledExpenseIds.has(String(t.id))) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Marking expense as settled:', {
+            expenseId: t.id,
+            itemName: t.itemName,
+          });
         }
-        return true;
-      })
-      .map(t => {
-        // RULE 2: Mark Expense rows as settled
-        if (t.type === 'purchase' && settledExpenseIds.has(String(t.id))) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Marking expense as settled:', {
-              expenseId: t.id,
-              itemName: t.itemName,
-            });
-          }
-          return { ...t, isSettled: true };
-        }
-        return t;
-      });
+        return { ...t, isSettled: true };
+      }
+      return t;
+    });
     
     // Debug final results
     if (process.env.NODE_ENV === 'development') {

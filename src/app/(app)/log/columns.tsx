@@ -420,7 +420,63 @@ export const createColumns = (users: User[], settlements: Settlement[]): ColumnD
             </div>
         )
       }
-      return <div className="font-medium text-primary">Settlement</div>;
+      
+      // Settlement display
+      if (transaction.type === 'settlement') {
+        // Check if this is an item-specific settlement
+        if (transaction.relatedExpenseId) {
+          // Find the related expense to get its name
+          const relatedExpense = settlements
+            .map(s => s.relatedExpenseId)
+            .includes(transaction.relatedExpenseId) 
+            ? 'Item Settlement' 
+            : 'Item Settlement';
+          
+          const fromUser = getUser(transaction.fromId);
+          const toUser = getUser(transaction.toId);
+          
+          return (
+            <div className="flex items-center gap-2">
+              <div className="rounded-full p-1.5 bg-green-500/10 flex-shrink-0">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <div className="font-medium text-green-600">
+                  Settlement
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {fromUser ? formatName(fromUser.name) : 'Unknown'} → {toUser ? formatName(toUser.name) : 'Unknown'}
+                </div>
+                {transaction.description && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {transaction.description}
+                  </div>
+                )}
+              </div>
+              <Badge variant="outline" className="ml-auto border-green-600 text-green-600">
+                Settled
+              </Badge>
+            </div>
+          );
+        }
+        
+        // General settlement (no related expense)
+        return (
+          <div className="flex items-center gap-2">
+            <div className="rounded-full p-1.5 bg-blue-500/10 flex-shrink-0">
+              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <div className="font-medium text-primary">General Settlement</div>
+              {transaction.description && (
+                <div className="text-sm text-muted-foreground">{transaction.description}</div>
+              )}
+            </div>
+          </div>
+        );
+      }
+      
+      return <div className="font-medium text-primary">Transaction</div>;
     },
   },
    {

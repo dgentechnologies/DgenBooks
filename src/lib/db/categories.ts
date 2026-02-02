@@ -15,6 +15,31 @@ import { DEFAULT_CATEGORIES } from '../default-categories';
 
 const CATEGORIES_COLLECTION = 'categories';
 
+// Ensure all default categories exist for a user (adds missing ones)
+export async function ensureDefaultCategories(firestore: Firestore, userId: string): Promise<void> {
+  const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);
+  
+  // Get existing categories
+  const querySnapshot = await getDocs(categoriesRef);
+  const existingCategories = new Set<string>();
+  querySnapshot.forEach((doc) => {
+    const category = doc.data() as Category;
+    existingCategories.add(category.name);
+  });
+  
+  // Add any missing default categories
+  for (const category of DEFAULT_CATEGORIES) {
+    if (!existingCategories.has(category.name)) {
+      const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      await setDoc(doc(categoriesRef, categoryId), {
+        ...category,
+        id: categoryId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+}
+
 // Initialize default categories for a user
 export async function initializeDefaultCategories(firestore: Firestore, userId: string): Promise<void> {
   const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);

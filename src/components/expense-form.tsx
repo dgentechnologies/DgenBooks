@@ -42,9 +42,17 @@ const formSchema = z.object({
   paidById: z.string().optional(),
   paidByAmounts: z.record(z.string(), z.coerce.number()).optional(),
   customSplit: z.boolean().default(false),
-  splitWith: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: "You have to select at least one member to split with.",
-  }),
+  splitWith: z.array(z.string()),
+}).refine((data) => {
+  // For company payment, splitWith validation is not required (can be empty)
+  if (data.paymentType === 'company') {
+    return true;
+  }
+  // For other payment types, at least one member must be selected
+  return data.splitWith.some((item) => item);
+}, {
+  message: "You have to select at least one member to split with.",
+  path: ["splitWith"],
 }).refine((data) => {
   // For single payment, paidById is required
   if (data.paymentType === 'single') {
@@ -115,6 +123,11 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
         },
   });
   
+  const paymentType = form.watch("paymentType");
+  const customSplit = form.watch("customSplit");
+  const amount = form.watch("amount");
+  const paidByAmounts = form.watch("paidByAmounts");
+  
   // Update splitWith default when users load
   useEffect(() => {
     if (!expense && users.length > 0 && form.getValues('splitWith').length === 0) {
@@ -122,10 +135,12 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
     }
   }, [users, expense, form]);
 
-  const paymentType = form.watch("paymentType");
-  const customSplit = form.watch("customSplit");
-  const amount = form.watch("amount");
-  const paidByAmounts = form.watch("paidByAmounts");
+  // Disable customSplit when paymentType is 'company'
+  useEffect(() => {
+    if (paymentType === 'company' && customSplit) {
+      form.setValue('customSplit', false);
+    }
+  }, [paymentType, customSplit, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
@@ -133,7 +148,10 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
     setIsLoading(true);
     try {
       // Prepare split members
-      const splitWith = values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]);
+      // For company payment, splitWith should be empty as it's not split among users
+      const splitWith = values.paymentType === 'company' 
+        ? [] 
+        : (values.customSplit ? values.splitWith : (users.length > 0 ? users.map(u => u.id) : [user.uid]));
       
       if (expense) {
         // Update existing purchase - exclude id, type, paidById, and paymentType
@@ -506,13 +524,16 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
               <div className="space-y-0.5">
                 <FormLabel>Custom Split</FormLabel>
                 <FormDescription className="text-xs sm:text-sm">
-                  Split cost only among selected users.
+                  {paymentType === 'company' 
+                    ? "Not available for company payments" 
+                    : "Split cost only among selected users."}
                 </FormDescription>
               </div>
               <FormControl>
                 <Switcher1
                   checked={field.value}
                   onCheckedChange={field.onChange}
+                  disabled={paymentType === 'company'}
                 />
               </FormControl>
             </FormItem>

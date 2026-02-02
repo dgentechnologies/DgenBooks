@@ -25,8 +25,9 @@ export type Purchase = {
   paidById: string; // For backward compatibility and single-payer expenses
   splitWith: string[]; // array of user IDs
   // New fields for multi-person payment support
-  paymentType?: 'single' | 'multiple'; // Optional for backward compatibility
+  paymentType?: 'single' | 'multiple' | 'company'; // Optional for backward compatibility
   paidByAmounts?: Record<string, number>; // Map of userId to amount paid (for multiple payers)
+  paidByCompany?: boolean; // Flag to indicate if expense is paid by company
 };
 
 export type Settlement = {

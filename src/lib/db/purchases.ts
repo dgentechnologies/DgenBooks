@@ -25,7 +25,6 @@ export async function createPurchase(
     ...purchaseData,
     createdAt: serverTimestamp(),
   });
-  
   // Send notifications to other users in the split (excluding the payer(s))
   // Skip notifications for company-paid expenses
   try {

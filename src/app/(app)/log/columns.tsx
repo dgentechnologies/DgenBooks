@@ -3,7 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import type { Transaction, User, Purchase, Settlement } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
-import { ArrowUpDown, Pencil, Trash2, Eye, CheckCircle2 } from "lucide-react"
+import { ArrowUpDown, Pencil, Trash2, Eye, CheckCircle2, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -288,18 +288,7 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
             {transaction.paidByCompany || transaction.paymentType === 'company' ? (
               <div className="flex items-center gap-2 mt-1 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800">
                 <div className="rounded-full p-1.5 bg-blue-100 dark:bg-blue-900 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
-                    <path d="M3 21h18"/>
-                    <path d="M9 8h1"/>
-                    <path d="M9 12h1"/>
-                    <path d="M9 16h1"/>
-                    <path d="M14 8h1"/>
-                    <path d="M14 12h1"/>
-                    <path d="M14 16h1"/>
-                    <path d="M6 3v18"/>
-                    <path d="M18 3v18"/>
-                    <path d="M3 3h18v5H3z"/>
-                  </svg>
+                  <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <span className="font-medium text-blue-900 dark:text-blue-100">Company</span>
               </div>
@@ -532,18 +521,7 @@ export const createColumns = (users: User[], settlements: Settlement[]): ColumnD
         return (
           <div className="flex items-center gap-2">
             <div className="rounded-full p-1.5 bg-blue-100 dark:bg-blue-900 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
-                <path d="M3 21h18"/>
-                <path d="M9 8h1"/>
-                <path d="M9 12h1"/>
-                <path d="M9 16h1"/>
-                <path d="M14 8h1"/>
-                <path d="M14 12h1"/>
-                <path d="M14 16h1"/>
-                <path d="M6 3v18"/>
-                <path d="M18 3v18"/>
-                <path d="M3 3h18v5H3z"/>
-              </svg>
+              <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             <span className="text-blue-700 dark:text-blue-300 font-medium">Company</span>
           </div>

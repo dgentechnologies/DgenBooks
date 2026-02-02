@@ -22,6 +22,7 @@ function generateCategoryId(categoryName: string): string {
 
 // Ensure all default categories exist for a user (adds missing ones)
 export async function ensureDefaultCategories(firestore: Firestore, userId: string): Promise<void> {
+  console.log(`[ensureDefaultCategories] Starting check for user ${userId}`);
   const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);
   
   // Get existing categories
@@ -32,17 +33,30 @@ export async function ensureDefaultCategories(firestore: Firestore, userId: stri
     existingCategories.add(category.name);
   });
   
+  console.log(`[ensureDefaultCategories] User ${userId} has ${existingCategories.size} categories:`, Array.from(existingCategories));
+  
   // Add any missing default categories
+  let addedCount = 0;
   for (const category of DEFAULT_CATEGORIES) {
     if (!existingCategories.has(category.name)) {
+      console.log(`[ensureDefaultCategories] Adding missing category: ${category.name} for user ${userId}`);
       const categoryId = generateCategoryId(category.name);
-      await setDoc(doc(categoriesRef, categoryId), {
-        ...category,
-        id: categoryId,
-        createdAt: new Date().toISOString(),
-      });
+      try {
+        await setDoc(doc(categoriesRef, categoryId), {
+          ...category,
+          id: categoryId,
+          createdAt: new Date().toISOString(),
+        });
+        addedCount++;
+        console.log(`[ensureDefaultCategories] ✅ Successfully added category: ${category.name}`);
+      } catch (error) {
+        console.error(`[ensureDefaultCategories] ❌ Failed to add category ${category.name}:`, error);
+        throw error;
+      }
     }
   }
+  
+  console.log(`[ensureDefaultCategories] Complete for user ${userId}. Added ${addedCount} missing categories.`);
 }
 
 // Initialize default categories for a user

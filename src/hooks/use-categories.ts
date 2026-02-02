@@ -50,8 +50,9 @@ export function useCategories() {
           // Ensure all default categories are present (adds missing ones)
           if (!ensuredRef.current) {
             ensuredRef.current = true;
+            console.log(`[useCategories] Triggering ensureDefaultCategories for user ${user.uid}`);
             ensureDefaultCategories(firestore, user.uid).catch((err) => {
-              console.error(`Error ensuring default categories for user ${user.uid}:`, err);
+              console.error(`[useCategories] Error ensuring default categories for user ${user.uid}:`, err);
             });
           }
           

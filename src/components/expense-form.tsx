@@ -49,7 +49,7 @@ const formSchema = z.object({
     return true;
   }
   // For other payment types, at least one member must be selected
-  return data.splitWith.some((item) => item);
+  return data.splitWith.length > 0;
 }, {
   message: "You have to select at least one member to split with.",
   path: ["splitWith"],

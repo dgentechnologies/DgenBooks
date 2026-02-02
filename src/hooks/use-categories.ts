@@ -51,7 +51,7 @@ export function useCategories() {
           if (!ensuredRef.current) {
             ensuredRef.current = true;
             ensureDefaultCategories(firestore, user.uid).catch((err) => {
-              console.error('Error ensuring default categories:', err);
+              console.error(`Error ensuring default categories for user ${user.uid}:`, err);
             });
           }
           

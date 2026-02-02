@@ -15,6 +15,11 @@ import { DEFAULT_CATEGORIES } from '../default-categories';
 
 const CATEGORIES_COLLECTION = 'categories';
 
+// Helper function to generate consistent category IDs
+function generateCategoryId(categoryName: string): string {
+  return categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
 // Ensure all default categories exist for a user (adds missing ones)
 export async function ensureDefaultCategories(firestore: Firestore, userId: string): Promise<void> {
   const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);
@@ -30,7 +35,7 @@ export async function ensureDefaultCategories(firestore: Firestore, userId: stri
   // Add any missing default categories
   for (const category of DEFAULT_CATEGORIES) {
     if (!existingCategories.has(category.name)) {
-      const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const categoryId = generateCategoryId(category.name);
       await setDoc(doc(categoriesRef, categoryId), {
         ...category,
         id: categoryId,
@@ -45,7 +50,7 @@ export async function initializeDefaultCategories(firestore: Firestore, userId: 
   const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);
   
   for (const category of DEFAULT_CATEGORIES) {
-    const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const categoryId = generateCategoryId(category.name);
     await setDoc(doc(categoriesRef, categoryId), {
       ...category,
       id: categoryId,
@@ -68,7 +73,7 @@ export async function getCategories(firestore: Firestore, userId: string): Promi
   if (categories.length === 0) {
     const defaultCategories: Category[] = [];
     for (const category of DEFAULT_CATEGORIES) {
-      const categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const categoryId = generateCategoryId(category.name);
       const newCategory: Category = {
         ...category,
         id: categoryId,
@@ -90,7 +95,7 @@ export async function createCategory(
   category: Omit<Category, 'id' | 'createdAt'>
 ): Promise<string> {
   const categoriesRef = collection(firestore, `users/${userId}/${CATEGORIES_COLLECTION}`);
-  let categoryId = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  let categoryId = generateCategoryId(category.name);
   
   // Check if ID already exists, append timestamp if needed
   const existingDoc = await getDoc(doc(categoriesRef, categoryId));

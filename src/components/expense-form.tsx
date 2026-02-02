@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switcher1 } from "@/components/ui/switcher1";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Loader2, Users, User } from "lucide-react";
+import { CalendarIcon, Loader2, Users, User, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { useUsers } from "@/hooks/use-users";
 import { useCategories } from "@/hooks/use-categories";
@@ -38,7 +38,7 @@ const formSchema = z.object({
   category: z.string().min(1, { message: "Category is required." }),
   amount: z.coerce.number().min(1, { message: "Amount must be greater than 0." }),
   date: z.date(),
-  paymentType: z.enum(['single', 'multiple'], { required_error: "Payment type is required." }),
+  paymentType: z.enum(['single', 'multiple', 'company'], { required_error: "Payment type is required." }),
   paidById: z.string().optional(),
   paidByAmounts: z.record(z.string(), z.coerce.number()).optional(),
   customSplit: z.boolean().default(false),
@@ -56,6 +56,7 @@ const formSchema = z.object({
     const amounts = Object.values(data.paidByAmounts);
     return amounts.length > 0 && amounts.some(amt => amt > 0);
   }
+  // For company payment, no payer validation is required
   return true;
 }, {
   message: "Payment information is required.",
@@ -158,6 +159,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
           paidById: values.paymentType === 'single' && values.paidById ? values.paidById : user.uid,
           splitWith: splitWith,
           ...(values.paymentType === 'multiple' && values.paidByAmounts ? { paidByAmounts: values.paidByAmounts } : {}),
+          ...(values.paymentType === 'company' ? { paidByCompany: true } : {}),
         };
         const purchaseId = await createPurchase(firestore, user.uid, purchaseData);
         
@@ -287,7 +289,7 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                 <RadioGroup
                   onValueChange={field.onChange}
                   defaultValue={field.value}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                  className="grid grid-cols-1 sm:grid-cols-3 gap-3"
                   disabled={!!expense}
                 >
                   <FormItem>
@@ -319,6 +321,23 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
                           <div className="flex-1">
                             <div className="font-medium text-sm">Multiple Payments</div>
                             <div className="text-xs text-muted-foreground">Multiple people paid different amounts</div>
+                          </div>
+                        </label>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                  <FormItem>
+                    <FormControl>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="company" id="company" />
+                        <label
+                          htmlFor="company"
+                          className="flex-1 flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/5 transition-colors"
+                        >
+                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">Company Payment</div>
+                            <div className="text-xs text-muted-foreground">Company paid, not split among users</div>
                           </div>
                         </label>
                       </div>
@@ -456,6 +475,26 @@ export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: Expense
               </div>
             )}
             <FormMessage />
+          </div>
+        )}
+
+        {/* Company Payment Info - Only shown for company payment type */}
+        {paymentType === 'company' && (
+          <div className="space-y-3 animate-fade-in">
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-4">
+              <div className="flex items-start gap-3">
+                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                    Company Paid Expense
+                  </h4>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    This expense is paid by the company and will not be divided among users. 
+                    It will appear in the expense log for record-keeping purposes only.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

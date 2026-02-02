@@ -15,7 +15,13 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
 
   for (const transaction of transactions) {
     if (transaction.type === 'purchase') {
-      const { paidById, amount, splitWith, paymentType, paidByAmounts } = transaction;
+      const { paidById, amount, splitWith, paymentType, paidByAmounts, paidByCompany } = transaction;
+      
+      // Skip company-paid expenses from balance calculations
+      if (paidByCompany === true || paymentType === 'company') {
+        continue;
+      }
+      
       if (splitWith.length === 0) continue;
       
       const share = amount / splitWith.length;

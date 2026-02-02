@@ -38,7 +38,10 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
 
   // Check if the current user owns this transaction
   const isOwner = user && (
-    (transaction.type === 'purchase' && transaction.paidById === user.uid) ||
+    (transaction.type === 'purchase' && (
+      transaction.paidById === user.uid ||
+      (transaction.paidByCompany === true || transaction.paymentType === 'company')
+    )) ||
     (transaction.type === 'settlement' && transaction.fromId === user.uid)
   );
 
@@ -282,7 +285,25 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
           {/* Paid By */}
           <div>
             <p className="text-sm font-medium text-muted-foreground">Paid By</p>
-            {transaction.paymentType === 'multiple' && payers.length > 0 ? (
+            {transaction.paidByCompany || transaction.paymentType === 'company' ? (
+              <div className="flex items-center gap-2 mt-1 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800">
+                <div className="rounded-full p-1.5 bg-blue-100 dark:bg-blue-900 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+                    <path d="M3 21h18"/>
+                    <path d="M9 8h1"/>
+                    <path d="M9 12h1"/>
+                    <path d="M9 16h1"/>
+                    <path d="M14 8h1"/>
+                    <path d="M14 12h1"/>
+                    <path d="M14 16h1"/>
+                    <path d="M6 3v18"/>
+                    <path d="M18 3v18"/>
+                    <path d="M3 3h18v5H3z"/>
+                  </svg>
+                </div>
+                <span className="font-medium text-blue-900 dark:text-blue-100">Company</span>
+              </div>
+            ) : transaction.paymentType === 'multiple' && payers.length > 0 ? (
               <div className="space-y-2 mt-1">
                 {payers.map(({ user, amount }) => {
                   const { id, avatar, name } = user;
@@ -505,6 +526,29 @@ export const createColumns = (users: User[], settlements: Settlement[]): ColumnD
     header: "Paid By / From",
     cell: ({ row }) => {
       const transaction = row.original;
+      
+      // Handle company-paid expenses
+      if (transaction.type === 'purchase' && (transaction.paidByCompany || transaction.paymentType === 'company')) {
+        return (
+          <div className="flex items-center gap-2">
+            <div className="rounded-full p-1.5 bg-blue-100 dark:bg-blue-900 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+                <path d="M3 21h18"/>
+                <path d="M9 8h1"/>
+                <path d="M9 12h1"/>
+                <path d="M9 16h1"/>
+                <path d="M14 8h1"/>
+                <path d="M14 12h1"/>
+                <path d="M14 16h1"/>
+                <path d="M6 3v18"/>
+                <path d="M18 3v18"/>
+                <path d="M3 3h18v5H3z"/>
+              </svg>
+            </div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Company</span>
+          </div>
+        );
+      }
       
       // Handle multiple payers for purchases
       if (transaction.type === 'purchase' && transaction.paymentType === 'multiple' && transaction.paidByAmounts) {

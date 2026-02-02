@@ -27,7 +27,14 @@ export async function createPurchase(
   });
   
   // Send notifications to other users in the split (excluding the payer(s))
+  // Skip notifications for company-paid expenses
   try {
+    // Skip notifications for company-paid expenses
+    if (purchaseData.paidByCompany === true || purchaseData.paymentType === 'company') {
+      console.log('ℹ️ [createPurchase] Skipping notifications for company-paid expense');
+      return docRef.id;
+    }
+    
     // Get all payers (single or multiple)
     const allPayers = purchaseData.paymentType === 'multiple' && purchaseData.paidByAmounts
       ? Object.keys(purchaseData.paidByAmounts)

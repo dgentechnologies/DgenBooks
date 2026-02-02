@@ -104,6 +104,7 @@ async function sendNotificationToUser(
 /**
  * Cloud Function: Triggered when a new expense (purchase) is created
  * Notifies all team members except the one who created it
+ * For company expenses, notifies all users
  */
 export const onPurchaseCreated = functions.firestore
   .document('purchases/{purchaseId}')
@@ -114,6 +115,47 @@ export const onPurchaseCreated = functions.firestore
     console.log('New purchase created:', purchaseId);
 
     try {
+      // Handle company-paid expenses
+      if (purchase.paidByCompany === true || purchase.paymentType === 'company') {
+        console.log('Company-paid expense created:', purchaseId);
+        
+        // Get all users except the creator (we assume paidById is the creator for company expenses)
+        const usersSnapshot = await admin.firestore().collection('users').get();
+        const usersToNotify = usersSnapshot.docs
+          .map(doc => doc.id)
+          .filter(userId => userId !== purchase.paidById);
+        
+        if (usersToNotify.length === 0) {
+          console.log(`No users to notify for company expense ${purchaseId}`);
+          return;
+        }
+        
+        // Get creator name
+        const creatorDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+        const creatorName = creatorDoc.exists ? creatorDoc.data()?.name || 'Someone' : 'Someone';
+        
+        // Send notification to each user
+        const notificationPromises = usersToNotify.map((userId: string) => {
+          return sendNotificationToUser(
+            userId,
+            {
+              title: '🏢 Company Expense Added',
+              body: `${creatorName} logged a company expense: ${purchase.itemName} (${formatCurrency(purchase.amount)})`,
+            },
+            {
+              type: 'company_expense',
+              url: '/log',
+              itemId: purchaseId,
+            }
+          );
+        });
+
+        await Promise.all(notificationPromises);
+        console.log(`Sent company expense notifications for ${purchaseId}`);
+        return;
+      }
+      
+      // Regular expense handling
       // Get the user who paid
       const payerDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
@@ -389,6 +431,7 @@ export const onSettlementCreated = functions.firestore
 /**
  * Cloud Function: Triggered when an expense (purchase) is updated
  * Notifies all team members except the one who updated it
+ * For company expenses, notifies all users
  */
 export const onPurchaseUpdated = functions.firestore
   .document('purchases/{purchaseId}')
@@ -406,6 +449,57 @@ export const onPurchaseUpdated = functions.firestore
         return;
       }
 
+      // Handle company-paid expenses
+      if (afterData.paidByCompany === true || afterData.paymentType === 'company') {
+        console.log('Company expense updated:', purchaseId);
+        
+        // Get all users except the updater
+        const usersSnapshot = await admin.firestore().collection('users').get();
+        const usersToNotify = usersSnapshot.docs
+          .map(doc => doc.id)
+          .filter(userId => userId !== afterData.paidById);
+        
+        if (usersToNotify.length === 0) {
+          console.log(`No users to notify for company expense ${purchaseId}`);
+          return;
+        }
+        
+        // Get updater name
+        const updaterDoc = await admin.firestore().collection('users').doc(afterData.paidById).get();
+        const updaterName = updaterDoc.exists ? updaterDoc.data()?.name || 'Someone' : 'Someone';
+        
+        // Build a description of what changed
+        let changeDescription = '';
+        if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
+          changeDescription = ` (amount changed from ${formatCurrency(beforeData.amount)} to ${formatCurrency(afterData.amount)})`;
+        } else if (beforeData.itemName !== afterData.itemName) {
+          changeDescription = ` (item name changed)`;
+        } else {
+          changeDescription = ' (details updated)';
+        }
+        
+        // Send notification to each user
+        const notificationPromises = usersToNotify.map((userId: string) => {
+          return sendNotificationToUser(
+            userId,
+            {
+              title: '✏️ Company Expense Updated',
+              body: `${updaterName} updated company expense: ${afterData.itemName || 'an expense'}${changeDescription}`,
+            },
+            {
+              type: 'company_expense_updated',
+              url: '/log',
+              itemId: purchaseId,
+            }
+          );
+        });
+
+        await Promise.all(notificationPromises);
+        console.log(`Sent company expense update notifications for ${purchaseId}`);
+        return;
+      }
+
+      // Regular expense handling
       // Get the user who updated
       const updaterDoc = await admin.firestore().collection('users').doc(afterData.paidById).get();
       const updaterName = updaterDoc.exists ? updaterDoc.data()?.name || 'Someone' : 'Someone';
@@ -454,6 +548,7 @@ export const onPurchaseUpdated = functions.firestore
 /**
  * Cloud Function: Triggered when an expense (purchase) is deleted
  * Notifies all team members who were involved except the one who deleted it
+ * For company expenses, notifies all users
  */
 export const onPurchaseDeleted = functions.firestore
   .document('purchases/{purchaseId}')
@@ -470,6 +565,49 @@ export const onPurchaseDeleted = functions.firestore
         return;
       }
 
+      // Handle company-paid expenses
+      if (purchase.paidByCompany === true || purchase.paymentType === 'company') {
+        console.log('Company expense deleted:', purchaseId);
+        
+        // Get all users except the deleter
+        const usersSnapshot = await admin.firestore().collection('users').get();
+        const usersToNotify = usersSnapshot.docs
+          .map(doc => doc.id)
+          .filter(userId => userId !== purchase.paidById);
+        
+        if (usersToNotify.length === 0) {
+          console.log(`No users to notify for company expense ${purchaseId}`);
+          return;
+        }
+        
+        // Get deleter name
+        const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+        const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';
+        
+        const amount = typeof purchase.amount === 'number' ? formatCurrency(purchase.amount) : formatCurrency(0);
+        
+        // Send notification to each user
+        const notificationPromises = usersToNotify.map((userId: string) => {
+          return sendNotificationToUser(
+            userId,
+            {
+              title: '🗑️ Company Expense Deleted',
+              body: `${deleterName} deleted company expense: ${purchase.itemName || 'an expense'} (${amount})`,
+            },
+            {
+              type: 'company_expense_deleted',
+              url: '/log',
+              itemId: purchaseId,
+            }
+          );
+        });
+
+        await Promise.all(notificationPromises);
+        console.log(`Sent company expense delete notifications for ${purchaseId}`);
+        return;
+      }
+
+      // Regular expense handling
       // Get the user who paid for this expense
       const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
       const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';

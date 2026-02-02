@@ -6,10 +6,20 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  getDocs,
   serverTimestamp
 } from 'firebase/firestore';
 import type { Purchase } from '@/lib/types';
 import { notifyUsers } from '@/lib/notifications';
+
+/**
+ * Get all user IDs from the users collection
+ */
+async function getAllUserIds(firestore: Firestore): Promise<string[]> {
+  const usersRef = collection(firestore, 'users');
+  const snapshot = await getDocs(usersRef);
+  return snapshot.docs.map(doc => doc.id);
+}
 
 /**
  * Create a new purchase in the shared purchases collection
@@ -25,12 +35,40 @@ export async function createPurchase(
     ...purchaseData,
     createdAt: serverTimestamp(),
   });
-  // Send notifications to other users in the split (excluding the payer(s))
-  // Skip notifications for company-paid expenses
+  // Send notifications to users about the expense
   try {
-    // Skip notifications for company-paid expenses
+    // For company-paid expenses, notify all users since it's for record-keeping
     if (purchaseData.paidByCompany === true || purchaseData.paymentType === 'company') {
-      console.log('ℹ️ [createPurchase] Skipping notifications for company-paid expense');
+      console.log('🔔 [createPurchase] Company-paid expense created:', {
+        purchaseId: docRef.id,
+        amount: purchaseData.amount,
+        itemName: purchaseData.itemName,
+      });
+      
+      // Get the user who created the expense
+      const creatorDoc = await getDoc(doc(firestore, 'users', userId));
+      const creatorName = creatorDoc.exists() ? creatorDoc.data()?.name || 'Someone' : 'Someone';
+      
+      // Notify all other users about the company expense
+      const allUserIds = await getAllUserIds(firestore);
+      const usersToNotify = allUserIds.filter((id: string) => id !== userId);
+      
+      if (usersToNotify.length > 0) {
+        console.log(`📢 [createPurchase] Notifying ${usersToNotify.length} user(s) about company expense`);
+        
+        notifyUsers(firestore, usersToNotify, {
+          title: '🏢 Company Expense Added',
+          body: `${creatorName} logged a company expense: ${purchaseData.itemName} (₹${purchaseData.amount.toFixed(2)})`,
+          data: {
+            type: 'company_expense',
+            url: '/log',
+            itemId: docRef.id,
+          },
+        }).catch(err => {
+          console.error('❌ [createPurchase] Failed to send company expense notification:', err);
+        });
+      }
+      
       return docRef.id;
     }
     
@@ -123,6 +161,52 @@ export async function updatePurchase(
     // Send notifications
     if (beforeData) {
       const afterData = { ...beforeData, ...updates };
+      
+      // Handle company-paid expense updates
+      if (afterData.paidByCompany === true || afterData.paymentType === 'company') {
+        console.log('🔔 [updatePurchase] Company expense updated:', {
+          purchaseId: purchaseId,
+          beforeAmount: beforeData.amount,
+          afterAmount: afterData.amount,
+          itemName: afterData.itemName
+        });
+        
+        // Get updater name
+        const updaterDoc = await getDoc(doc(firestore, 'users', userId));
+        const updaterName = updaterDoc.exists() ? updaterDoc.data()?.name || 'Someone' : 'Someone';
+        
+        // Notify all other users about the company expense update
+        const allUserIds = await getAllUserIds(firestore);
+        const usersToNotify = allUserIds.filter((id: string) => id !== userId);
+        
+        if (usersToNotify.length > 0) {
+          // Build change description
+          let changeDescription = '';
+          if (beforeData.amount !== afterData.amount && typeof afterData.amount === 'number' && typeof beforeData.amount === 'number') {
+            changeDescription = ` (amount changed from ₹${beforeData.amount.toFixed(2)} to ₹${afterData.amount.toFixed(2)})`;
+          } else if (beforeData.itemName !== afterData.itemName) {
+            changeDescription = ` (item name changed)`;
+          } else {
+            changeDescription = ' (details updated)';
+          }
+          
+          console.log(`📢 [updatePurchase] Notifying ${usersToNotify.length} user(s) about company expense update`);
+          
+          notifyUsers(firestore, usersToNotify, {
+            title: '✏️ Company Expense Updated',
+            body: `${updaterName} updated company expense: ${afterData.itemName || 'an expense'}${changeDescription}`,
+            data: {
+              type: 'company_expense_updated',
+              url: '/log',
+              itemId: purchaseId,
+            },
+          }).catch(err => {
+            console.error('❌ [updatePurchase] Failed to send notification:', err);
+          });
+        }
+        
+        return;
+      }
       
       // Get all payers (single or multiple)
       const allPayers = afterData.paymentType === 'multiple' && afterData.paidByAmounts
@@ -218,8 +302,45 @@ export async function deletePurchase(
     await deleteDoc(purchaseRef);
     
     // Send notifications
-    if (purchaseData && purchaseData.paidById) {
-      // Get all payers (single or multiple)
+    if (purchaseData) {
+      // Handle company-paid expense deletions
+      if (purchaseData.paidByCompany === true || purchaseData.paymentType === 'company') {
+        console.log('🔔 [deletePurchase] Company expense deleted:', {
+          purchaseId: purchaseId,
+          amount: purchaseData.amount,
+          itemName: purchaseData.itemName
+        });
+        
+        // Get deleter name
+        const deleterDoc = await getDoc(doc(firestore, 'users', userId));
+        const deleterName = deleterDoc.exists() ? deleterDoc.data()?.name || 'Someone' : 'Someone';
+        
+        const amount = typeof purchaseData.amount === 'number' ? purchaseData.amount.toFixed(2) : '0.00';
+        
+        // Notify all other users about the company expense deletion
+        const allUserIds = await getAllUserIds(firestore);
+        const usersToNotify = allUserIds.filter((id: string) => id !== userId);
+        
+        if (usersToNotify.length > 0) {
+          console.log(`📢 [deletePurchase] Notifying ${usersToNotify.length} user(s) about company expense deletion`);
+          
+          notifyUsers(firestore, usersToNotify, {
+            title: '🗑️ Company Expense Deleted',
+            body: `${deleterName} deleted company expense: ${purchaseData.itemName || 'an expense'} (₹${amount})`,
+            data: {
+              type: 'company_expense_deleted',
+              url: '/log',
+              itemId: purchaseId,
+            },
+          }).catch(err => {
+            console.error('❌ [deletePurchase] Failed to send notification:', err);
+          });
+        }
+        
+        return;
+      }
+      
+      // Get all payers (single or multiple) for regular expenses
       const allPayers = purchaseData.paymentType === 'multiple' && purchaseData.paidByAmounts
         ? Object.keys(purchaseData.paidByAmounts)
         : [purchaseData.paidById];

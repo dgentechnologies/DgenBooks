@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil, Trash2, Plus, Loader2, FolderKanban } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, FolderKanban, RefreshCw } from "lucide-react";
 import { useCategories } from "@/hooks/use-categories";
 import { useUser, useFirestore } from "@/firebase";
 import { 
@@ -38,7 +38,8 @@ import {
   updateCategory, 
   deleteCategory, 
   isCategoryInUse, 
-  reassignPurchaseCategory 
+  reassignPurchaseCategory,
+  ensureDefaultCategories
 } from "@/lib/db/categories";
 import { getCategoryIcon, getIconByName } from "@/lib/category-icons";
 import { toast } from "@/lib/toast";
@@ -70,9 +71,29 @@ export function CategoryManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryIcon, setNewCategoryIcon] = useState("PackageOpen");
+
+  const handleSyncCategories = async () => {
+    if (!user || !firestore) {
+      toast.error("Error", "User not authenticated");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      console.log(`[CategoryManagement] Starting manual category sync for user ${user.uid}`);
+      await ensureDefaultCategories(firestore, user.uid);
+      toast.success("Categories Synced", "All default categories have been added to your account");
+    } catch (error) {
+      console.error("Error syncing categories:", error);
+      toast.error("Sync Failed", "Failed to sync categories. Please try again or contact support.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleAddCategory = async () => {
     if (!user || !firestore || !newCategoryName.trim()) {
@@ -189,13 +210,33 @@ export function CategoryManagement() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button
-              onClick={() => setIsAddDialogOpen(true)}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Category
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="flex-1"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Category
+              </Button>
+              <Button
+                onClick={handleSyncCategories}
+                variant="outline"
+                disabled={isSyncing}
+                className="flex-shrink-0"
+              >
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync Defaults
+                  </>
+                )}
+              </Button>
+            </div>
 
             <div className="space-y-2">
               {categories.map((category) => {

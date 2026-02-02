@@ -4,13 +4,14 @@ import { useEffect, useState, useRef } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import type { Category } from '@/lib/types';
-import { initializeDefaultCategories } from '@/lib/db/categories';
+import { initializeDefaultCategories, ensureDefaultCategories } from '@/lib/db/categories';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const initializingRef = useRef(false);
+  const ensuredRef = useRef(false);
   
   const firestore = useFirestore();
   const { user } = useUser();
@@ -46,6 +47,15 @@ export function useCategories() {
               initializingRef.current = false;
             });
         } else if (categoriesData.length > 0) {
+          // Ensure all default categories are present (adds missing ones)
+          if (!ensuredRef.current) {
+            ensuredRef.current = true;
+            console.log(`[useCategories] Triggering ensureDefaultCategories for user ${user.uid}`);
+            ensureDefaultCategories(firestore, user.uid).catch((err) => {
+              console.error(`[useCategories] Error ensuring default categories for user ${user.uid}:`, err);
+            });
+          }
+          
           // Sort categories alphabetically
           categoriesData.sort((a, b) => a.name.localeCompare(b.name));
           setCategories(categoriesData);

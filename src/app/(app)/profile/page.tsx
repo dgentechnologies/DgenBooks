@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User, IndianRupee, Wallet } from "lucide-react";
+import { Loader2, User, IndianRupee, Wallet, Building2 } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 import { toast } from "@/lib/toast";
 import { useUserPurchases } from "@/hooks/use-purchases";
@@ -29,16 +29,21 @@ export default function ProfilePage() {
   const { users, isLoading: usersLoading } = useUsers();
 
   // Calculate stats
-  const { totalSpent, currentBalance } = useMemo(() => {
+  const { totalSpent, currentBalance, totalCompanyExpenses } = useMemo(() => {
     if (!user || !purchases || !settlements) {
-      return { totalSpent: 0, currentBalance: 0 };
+      return { totalSpent: 0, currentBalance: 0, totalCompanyExpenses: 0 };
     }
 
     // Combine purchases and settlements into transactions
     const transactions: Transaction[] = [...purchases, ...settlements];
     
-    // Calculate total spent including multi-payer expenses
+    // Calculate total spent including multi-payer expenses (excluding company expenses)
     const spent = purchases.reduce((sum, p) => {
+      // Skip company-paid expenses
+      if (p.paidByCompany === true || p.paymentType === 'company') {
+        return sum;
+      }
+      
       // For single-payer expenses
       if (p.paymentType !== 'multiple' && p.paidById === user.uid) {
         return sum + p.amount;
@@ -51,12 +56,20 @@ export default function ProfilePage() {
       
       return sum;
     }, 0);
+    
+    // Calculate total company expenses
+    const companyExpenses = purchases.reduce((sum, p) => {
+      if (p.paidByCompany === true || p.paymentType === 'company') {
+        return sum + p.amount;
+      }
+      return sum;
+    }, 0);
 
     // Calculate current balance
     const { netBalances } = calculateBalances(transactions, users);
     const balance = netBalances?.get(user.uid) || 0;
 
-    return { totalSpent: spent, currentBalance: balance };
+    return { totalSpent: spent, currentBalance: balance, totalCompanyExpenses: companyExpenses };
   }, [user, purchases, settlements, users]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -103,7 +116,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3">
         {/* Total Spent Card */}
         <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -147,10 +160,32 @@ export default function ProfilePage() {
             </p>
           </CardContent>
         </Card>
+        
+        {/* Company Expenses Card */}
+        <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.2s'}}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Company Expenses
+            </CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isStatsLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <div className="text-2xl font-bold text-blue-400">
+                ₹{totalCompanyExpenses.toLocaleString("en-IN")}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Total company-paid expenses
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Profile Details Card */}
-      <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.2s'}}>
+      <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.3s'}}>
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center gap-2">
             <User className="h-5 w-5" />

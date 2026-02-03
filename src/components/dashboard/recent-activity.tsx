@@ -55,7 +55,9 @@ export function RecentActivity({ transactions, users }: RecentActivityProps) {
                           {transaction.itemName}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate mt-1">
-                          {transaction.paymentType === 'multiple' && transaction.paidByAmounts ? (
+                          {transaction.paidByCompany || transaction.paymentType === 'company' ? (
+                            'Paid by Company'
+                          ) : transaction.paymentType === 'multiple' && transaction.paidByAmounts ? (
                             (() => {
                               const payers = Object.keys(transaction.paidByAmounts)
                                 .filter(userId => (transaction.paidByAmounts?.[userId] || 0) > 0)

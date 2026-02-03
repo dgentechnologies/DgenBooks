@@ -160,12 +160,10 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
     
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Eye className="h-4 w-4" />
-            <span className="sr-only">View settlement details</span>
-          </Button>
-        </DialogTrigger>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(true)}>
+          <Eye className="h-4 w-4" />
+          <span className="sr-only">View settlement details</span>
+        </Button>
         <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl">Settlement Details</DialogTitle>
@@ -241,12 +239,10 @@ function ViewExpenseDialog({ transaction, users }: { transaction: Transaction; u
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Eye className="h-4 w-4" />
-          <span className="sr-only">View expense details</span>
-        </Button>
-      </DialogTrigger>
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(true)}>
+        <Eye className="h-4 w-4" />
+        <span className="sr-only">View expense details</span>
+      </Button>
       <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-headline text-xl">Expense Details</DialogTitle>

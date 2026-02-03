@@ -94,8 +94,13 @@ export default function ExpenseLogPage() {
     }
     
     if (filter === 'my-spending') {
-      // Show only expenses paid by current user
-      return derivedTransactions.filter(t => t.type === 'purchase' && t.paidById === user?.uid);
+      // Show only expenses paid by current user (exclude company-paid expenses)
+      return derivedTransactions.filter(t => 
+        t.type === 'purchase' && 
+        t.paidById === user?.uid && 
+        !t.paidByCompany && 
+        t.paymentType !== 'company'
+      );
     }
     
     if (filter === 'involved') {

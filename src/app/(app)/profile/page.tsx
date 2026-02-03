@@ -98,10 +98,10 @@ export default function ProfilePage() {
     }, 0);
 
     // Calculate net expense: purchases + settlements paid - settlements received
-    const userNetExpense = spent + paidToOthers - receivedFromOthers;
+    const netExpense = spent + paidToOthers - receivedFromOthers;
 
     // Calculate total company investment: sum of all purchases (includes company-paid and user-paid)
-    const totalInvestment = purchases.reduce((sum, p) => sum + p.amount, 0);
+    const totalCompanyInvestment = purchases.reduce((sum, p) => sum + p.amount, 0);
 
     // Calculate current balance
     const { netBalances } = calculateBalances(transactions, users);
@@ -113,8 +113,8 @@ export default function ProfilePage() {
       totalCompanyExpenses: companyExpenses,
       settlementsPaid: paidToOthers,
       settlementsReceived: receivedFromOthers,
-      netExpense: userNetExpense,
-      totalCompanyInvestment: totalInvestment
+      netExpense: netExpense,
+      totalCompanyInvestment: totalCompanyInvestment
     };
   }, [user, purchases, settlements, users]);
 

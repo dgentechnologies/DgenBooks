@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User, IndianRupee, Wallet, Building2 } from "lucide-react";
+import { Loader2, User, IndianRupee, Wallet, Building2, ArrowUpRight, ArrowDownLeft, TrendingUp, Briefcase } from "lucide-react";
 import { updateProfile } from "firebase/auth";
 import { toast } from "@/lib/toast";
 import { useUserPurchases } from "@/hooks/use-purchases";
@@ -29,9 +29,25 @@ export default function ProfilePage() {
   const { users, isLoading: usersLoading } = useUsers();
 
   // Calculate stats
-  const { totalSpent, currentBalance, totalCompanyExpenses } = useMemo(() => {
+  const { 
+    totalSpent, 
+    currentBalance, 
+    totalCompanyExpenses,
+    settlementsPaid,
+    settlementsReceived,
+    netExpense,
+    totalCompanyInvestment
+  } = useMemo(() => {
     if (!user || !purchases || !settlements) {
-      return { totalSpent: 0, currentBalance: 0, totalCompanyExpenses: 0 };
+      return { 
+        totalSpent: 0, 
+        currentBalance: 0, 
+        totalCompanyExpenses: 0,
+        settlementsPaid: 0,
+        settlementsReceived: 0,
+        netExpense: 0,
+        totalCompanyInvestment: 0
+      };
     }
 
     // Combine purchases and settlements into transactions
@@ -65,11 +81,41 @@ export default function ProfilePage() {
       return sum;
     }, 0);
 
+    // Calculate settlements paid by current user to others
+    const paidToOthers = settlements.reduce((sum, s) => {
+      if (s.fromId === user.uid) {
+        return sum + s.amount;
+      }
+      return sum;
+    }, 0);
+
+    // Calculate settlements received by current user from others
+    const receivedFromOthers = settlements.reduce((sum, s) => {
+      if (s.toId === user.uid) {
+        return sum + s.amount;
+      }
+      return sum;
+    }, 0);
+
+    // Calculate net expense: purchases + settlements paid - settlements received
+    const userNetExpense = spent + paidToOthers - receivedFromOthers;
+
+    // Calculate total company investment: all purchases from all users + company expenses
+    const totalInvestment = purchases.reduce((sum, p) => sum + p.amount, 0);
+
     // Calculate current balance
     const { netBalances } = calculateBalances(transactions, users);
     const balance = netBalances?.get(user.uid) || 0;
 
-    return { totalSpent: spent, currentBalance: balance, totalCompanyExpenses: companyExpenses };
+    return { 
+      totalSpent: spent, 
+      currentBalance: balance, 
+      totalCompanyExpenses: companyExpenses,
+      settlementsPaid: paidToOthers,
+      settlementsReceived: receivedFromOthers,
+      netExpense: userNetExpense,
+      totalCompanyInvestment: totalInvestment
+    };
   }, [user, purchases, settlements, users]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -184,8 +230,108 @@ export default function ProfilePage() {
         </Card>
       </div>
 
+      {/* Settlement Statistics Section */}
+      <div className="mt-6">
+        <h3 className="text-xl font-semibold mb-4 text-white">Settlement Details</h3>
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
+          {/* Amount Paid to Others Card */}
+          <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.3s'}}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Paid to Others
+              </CardTitle>
+              <ArrowUpRight className="h-4 w-4 text-red-400" />
+            </CardHeader>
+            <CardContent>
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="text-2xl font-bold text-red-400">
+                  ₹{settlementsPaid.toLocaleString("en-IN")}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Total settlements paid to others
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Amount Received from Others Card */}
+          <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.4s'}}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Received from Others
+              </CardTitle>
+              <ArrowDownLeft className="h-4 w-4 text-green-400" />
+            </CardHeader>
+            <CardContent>
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="text-2xl font-bold text-green-400">
+                  ₹{settlementsReceived.toLocaleString("en-IN")}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Total settlements received from others
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Total Investment Statistics Section */}
+      <div className="mt-6">
+        <h3 className="text-xl font-semibold mb-4 text-white">Investment Summary</h3>
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
+          {/* Net Expense Card */}
+          <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.5s'}}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Your Net Expense
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-purple-400" />
+            </CardHeader>
+            <CardContent>
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="text-2xl font-bold text-purple-400">
+                  ₹{netExpense.toLocaleString("en-IN")}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Purchases + paid - received
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Total Company Investment Card */}
+          <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.6s'}}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Company Investment
+              </CardTitle>
+              <Briefcase className="h-4 w-4 text-amber-400" />
+            </CardHeader>
+            <CardContent>
+              {isStatsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="text-2xl font-bold text-amber-400">
+                  ₹{totalCompanyInvestment.toLocaleString("en-IN")}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                All expenses including company
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Profile Details Card */}
-      <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.3s'}}>
+      <Card className="bg-slate-950/50 backdrop-blur-xl border-white/10 shadow-2xl animate-slide-in-right" style={{animationDelay: '0.7s'}}>
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center gap-2">
             <User className="h-5 w-5" />

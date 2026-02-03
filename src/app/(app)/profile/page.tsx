@@ -113,8 +113,8 @@ export default function ProfilePage() {
       totalCompanyExpenses: companyExpenses,
       settlementsPaid: paidToOthers,
       settlementsReceived: receivedFromOthers,
-      netExpense: netExpense,
-      totalCompanyInvestment: totalCompanyInvestment
+      netExpense,
+      totalCompanyInvestment
     };
   }, [user, purchases, settlements, users]);
 

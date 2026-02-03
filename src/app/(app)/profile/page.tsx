@@ -100,7 +100,7 @@ export default function ProfilePage() {
     // Calculate net expense: purchases + settlements paid - settlements received
     const userNetExpense = spent + paidToOthers - receivedFromOthers;
 
-    // Calculate total company investment: all purchases from all users + company expenses
+    // Calculate total company investment: sum of all purchases (includes company-paid and user-paid)
     const totalInvestment = purchases.reduce((sum, p) => sum + p.amount, 0);
 
     // Calculate current balance
@@ -323,7 +323,7 @@ export default function ProfilePage() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                All expenses including company
+                Total of all purchases
               </p>
             </CardContent>
           </Card>

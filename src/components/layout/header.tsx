@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -10,15 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
-import { LogOut } from "lucide-react";
+import { LogOut, X } from "lucide-react";
 import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "@/lib/toast";
@@ -42,6 +37,15 @@ export function Header() {
   const auth = useAuth();
   const router = useRouter();
   const [accessOpen, setAccessOpen] = useState(false);
+
+  useEffect(() => {
+    if (!accessOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAccessOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [accessOpen]);
 
   const handleLogout = async () => {
     try {
@@ -125,9 +129,17 @@ export function Header() {
         </div>
       </header>
 
-      <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
-        <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 gap-0 overflow-hidden rounded-2xl border border-white/10">
-          <DialogTitle className="sr-only">Dgen Access</DialogTitle>
+      {accessOpen && (
+        <div className="fixed inset-0 z-50 bg-background" role="dialog" aria-modal="true" aria-label="Dgen Access">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setAccessOpen(false)}
+            className="absolute right-3 top-3 z-10 h-10 w-10 rounded-sm bg-background/80 backdrop-blur-sm border-white/10 touch-manipulation"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </Button>
           <iframe
             src={DGEN_ACCESS_URL}
             className="w-full h-full border-0"
@@ -135,8 +147,8 @@ export function Header() {
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             referrerPolicy="strict-origin-when-cross-origin"
           />
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </>
   );
 }

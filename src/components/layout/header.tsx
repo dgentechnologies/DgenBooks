@@ -64,7 +64,7 @@ export function Header() {
             window.open(
               "https://dgen-access-control.vercel.app/",
               "_blank",
-              "toolbar=no,menubar=no,scrollbars=yes,resizable=yes"
+              "noopener,noreferrer"
             )
           }
           title="Dgen Access"

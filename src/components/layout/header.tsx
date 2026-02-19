@@ -56,6 +56,31 @@ export function Header() {
       </div>
       <h1 className="text-lg sm:text-xl md:text-2xl font-semibold font-headline truncate flex-1 md:flex-none">{title}</h1>
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-all"
+          onClick={() =>
+            window.open(
+              "https://dgen-access-control.vercel.app/",
+              "_blank",
+              "toolbar=no,menubar=no,scrollbars=yes,resizable=yes"
+            )
+          }
+          title="Dgen Access"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dgen-access-favicon.ico"
+            alt="Dgen Access"
+            className="h-4 w-4 rounded-sm"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src =
+                "https://dgen-access-control.vercel.app/favicon.ico";
+            }}
+          />
+          <span className="hidden sm:inline text-xs font-medium">Access</span>
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all">

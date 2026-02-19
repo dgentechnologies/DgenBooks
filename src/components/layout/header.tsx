@@ -71,9 +71,13 @@ export function Header() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://dgen-access-control.vercel.app/favicon.ico"
+            src="/dgen-access-favicon.ico"
             alt="Dgen Access"
             className="h-4 w-4 rounded-sm"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src =
+                "https://dgen-access-control.vercel.app/favicon.ico";
+            }}
           />
           <span className="hidden sm:inline text-xs font-medium">Access</span>
         </Button>

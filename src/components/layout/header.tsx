@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -13,12 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
-import { LogOut, X } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "@/lib/toast";
 
-const DGEN_ACCESS_URL = "https://dgen-access-control.vercel.app/";
+import { DGEN_ACCESS_URL } from "@/lib/constants";
 
 function getTitleFromPathname(pathname: string): string {
   if (pathname === "/") return "Dashboard";
@@ -27,6 +26,7 @@ function getTitleFromPathname(pathname: string): string {
   if (pathname.startsWith("/profile")) return "Profile";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/requests")) return "Purchase List";
+  if (pathname.startsWith("/dgen-access")) return "Dgen Access";
   return "DgenBooks";
 }
 
@@ -36,16 +36,6 @@ export function Header() {
   const { user } = useUser();
   const auth = useAuth();
   const router = useRouter();
-  const [accessOpen, setAccessOpen] = useState(false);
-
-  useEffect(() => {
-    if (!accessOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setAccessOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [accessOpen]);
 
   const handleLogout = async () => {
     try {
@@ -61,8 +51,7 @@ export function Header() {
   const userName = user?.displayName || user?.email || "User";
 
   return (
-    <>
-      <header className="sticky top-0 z-10 flex min-h-[5rem] items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 py-4 backdrop-blur-lg md:px-6 transition-all mobile-safe-area-top mobile-safe-area-x">
+    <header className="sticky top-0 z-10 flex min-h-[5rem] items-center gap-2 sm:gap-4 border-b bg-background/80 px-3 sm:px-4 py-4 backdrop-blur-lg md:px-6 transition-all mobile-safe-area-top mobile-safe-area-x">
         <div className="md:hidden">
           <div className="rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm p-1.5">
             <SidebarTrigger className="h-8 w-8" />
@@ -74,7 +63,7 @@ export function Header() {
             variant="outline"
             size="sm"
             className="flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-all"
-            onClick={() => setAccessOpen(true)}
+            onClick={() => router.push("/dgen-access")}
             title="Dgen Access"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -128,27 +117,5 @@ export function Header() {
           </DropdownMenu>
         </div>
       </header>
-
-      {accessOpen && (
-        <div className="fixed inset-0 z-50 bg-background" role="dialog" aria-modal="true" aria-label="Dgen Access">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setAccessOpen(false)}
-            className="absolute right-3 top-3 z-10 h-10 w-10 rounded-sm bg-background/80 backdrop-blur-sm border-white/10 touch-manipulation"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <iframe
-            src={DGEN_ACCESS_URL}
-            className="w-full h-full border-0"
-            title="Dgen Access"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-        </div>
-      )}
-    </>
   );
 }

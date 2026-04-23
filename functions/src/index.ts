@@ -4,6 +4,10 @@ import * as admin from 'firebase-admin';
 // Initialize Firebase Admin
 admin.initializeApp();
 
+const booksDatabaseId = process.env.FIREBASE_BOOKS_DATABASE_ID || '(default)';
+const firestoreDb = admin.firestore(booksDatabaseId);
+const firestoreNamespace = functions.firestore.database(booksDatabaseId);
+
 // Shared currency formatter instance for better performance
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -50,7 +54,7 @@ async function sendNotificationToUser(
 ): Promise<void> {
   try {
     // Get user document to retrieve FCM tokens
-    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userDoc = await firestoreDb.collection('users').doc(userId).get();
     
     if (!userDoc.exists) {
       console.log(`User ${userId} not found`);
@@ -90,7 +94,7 @@ async function sendNotificationToUser(
       });
 
       if (tokensToRemove.length > 0) {
-        await admin.firestore().collection('users').doc(userId).update({
+        await firestoreDb.collection('users').doc(userId).update({
           fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
         });
         console.log(`Removed ${tokensToRemove.length} invalid tokens for user ${userId}`);
@@ -106,7 +110,7 @@ async function sendNotificationToUser(
  * Notifies all team members except the one who created it
  * For company expenses, notifies all users
  */
-export const onPurchaseCreated = functions.firestore
+export const onPurchaseCreated = firestoreNamespace
   .document('purchases/{purchaseId}')
   .onCreate(async (snapshot, context) => {
     const purchase = snapshot.data();
@@ -120,7 +124,7 @@ export const onPurchaseCreated = functions.firestore
         console.log('Company-paid expense created:', purchaseId);
         
         // Get all users except the creator (we assume paidById is the creator for company expenses)
-        const usersSnapshot = await admin.firestore().collection('users').get();
+        const usersSnapshot = await firestoreDb.collection('users').get();
         const usersToNotify = usersSnapshot.docs
           .map(doc => doc.id)
           .filter(userId => userId !== purchase.paidById);
@@ -131,7 +135,7 @@ export const onPurchaseCreated = functions.firestore
         }
         
         // Get creator name
-        const creatorDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+        const creatorDoc = await firestoreDb.collection('users').doc(purchase.paidById).get();
         const creatorName = creatorDoc.exists ? creatorDoc.data()?.name || 'Someone' : 'Someone';
         
         // Send notification to each user
@@ -157,7 +161,7 @@ export const onPurchaseCreated = functions.firestore
       
       // Regular expense handling
       // Get the user who paid
-      const payerDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+      const payerDoc = await firestoreDb.collection('users').doc(purchase.paidById).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users who are split with (excluding the payer)
@@ -191,7 +195,7 @@ export const onPurchaseCreated = functions.firestore
  * Cloud Function: Triggered when a new purchase request is created
  * Notifies all team members except the requester
  */
-export const onPurchaseRequestCreated = functions.firestore
+export const onPurchaseRequestCreated = firestoreNamespace
   .document('purchaseRequests/{requestId}')
   .onCreate(async (snapshot, context) => {
     const request = snapshot.data();
@@ -201,11 +205,11 @@ export const onPurchaseRequestCreated = functions.firestore
 
     try {
       // Get the user who made the request
-      const requesterDoc = await admin.firestore().collection('users').doc(request.requestedBy).get();
+      const requesterDoc = await firestoreDb.collection('users').doc(request.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users except the requester
-      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersSnapshot = await firestoreDb.collection('users').get();
       const usersToNotify = usersSnapshot.docs
         .map(doc => doc.id)
         .filter(userId => userId !== request.requestedBy);
@@ -247,7 +251,7 @@ export const onPurchaseRequestCreated = functions.firestore
  * Cloud Function: Triggered when a purchase request is updated
  * Notifies all team members except the one who updated it
  */
-export const onPurchaseRequestUpdated = functions.firestore
+export const onPurchaseRequestUpdated = firestoreNamespace
   .document('purchaseRequests/{requestId}')
   .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
@@ -265,11 +269,11 @@ export const onPurchaseRequestUpdated = functions.firestore
 
       // Get the user who made the original request
       // Note: We notify other users and exclude the original requester since we don't track who performs updates
-      const requesterDoc = await admin.firestore().collection('users').doc(afterData.requestedBy).get();
+      const requesterDoc = await firestoreDb.collection('users').doc(afterData.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users except the requester
-      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersSnapshot = await firestoreDb.collection('users').get();
       const usersToNotify = usersSnapshot.docs
         .map(doc => doc.id)
         .filter(userId => userId !== afterData.requestedBy);
@@ -336,7 +340,7 @@ export const onPurchaseRequestUpdated = functions.firestore
  * Cloud Function: Triggered when a purchase request is deleted
  * Notifies all team members except the one who created/deleted it
  */
-export const onPurchaseRequestDeleted = functions.firestore
+export const onPurchaseRequestDeleted = firestoreNamespace
   .document('purchaseRequests/{requestId}')
   .onDelete(async (snapshot, context) => {
     const request = snapshot.data();
@@ -352,11 +356,11 @@ export const onPurchaseRequestDeleted = functions.firestore
       }
 
       // Get the user who made the request
-      const requesterDoc = await admin.firestore().collection('users').doc(request.requestedBy).get();
+      const requesterDoc = await firestoreDb.collection('users').doc(request.requestedBy).get();
       const requesterName = requesterDoc.exists ? requesterDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users except the requester
-      const usersSnapshot = await admin.firestore().collection('users').get();
+      const usersSnapshot = await firestoreDb.collection('users').get();
       const usersToNotify = usersSnapshot.docs
         .map(doc => doc.id)
         .filter(userId => userId !== request.requestedBy);
@@ -395,7 +399,7 @@ export const onPurchaseRequestDeleted = functions.firestore
  * Cloud Function: Triggered when a new settlement is created
  * Notifies the user who receives the payment
  */
-export const onSettlementCreated = functions.firestore
+export const onSettlementCreated = firestoreNamespace
   .document('settlements/{settlementId}')
   .onCreate(async (snapshot, context) => {
     const settlement = snapshot.data();
@@ -405,7 +409,7 @@ export const onSettlementCreated = functions.firestore
 
     try {
       // Get the user who paid
-      const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
+      const payerDoc = await firestoreDb.collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
       // Notify the user who received the payment
@@ -433,7 +437,7 @@ export const onSettlementCreated = functions.firestore
  * Notifies all team members except the one who updated it
  * For company expenses, notifies all users
  */
-export const onPurchaseUpdated = functions.firestore
+export const onPurchaseUpdated = firestoreNamespace
   .document('purchases/{purchaseId}')
   .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
@@ -454,7 +458,7 @@ export const onPurchaseUpdated = functions.firestore
         console.log('Company expense updated:', purchaseId);
         
         // Get all users except the updater
-        const usersSnapshot = await admin.firestore().collection('users').get();
+        const usersSnapshot = await firestoreDb.collection('users').get();
         const usersToNotify = usersSnapshot.docs
           .map(doc => doc.id)
           .filter(userId => userId !== afterData.paidById);
@@ -465,7 +469,7 @@ export const onPurchaseUpdated = functions.firestore
         }
         
         // Get updater name
-        const updaterDoc = await admin.firestore().collection('users').doc(afterData.paidById).get();
+        const updaterDoc = await firestoreDb.collection('users').doc(afterData.paidById).get();
         const updaterName = updaterDoc.exists ? updaterDoc.data()?.name || 'Someone' : 'Someone';
         
         // Build a description of what changed
@@ -501,7 +505,7 @@ export const onPurchaseUpdated = functions.firestore
 
       // Regular expense handling
       // Get the user who updated
-      const updaterDoc = await admin.firestore().collection('users').doc(afterData.paidById).get();
+      const updaterDoc = await firestoreDb.collection('users').doc(afterData.paidById).get();
       const updaterName = updaterDoc.exists ? updaterDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users who are split with (excluding the updater)
@@ -550,7 +554,7 @@ export const onPurchaseUpdated = functions.firestore
  * Notifies all team members who were involved except the one who deleted it
  * For company expenses, notifies all users
  */
-export const onPurchaseDeleted = functions.firestore
+export const onPurchaseDeleted = firestoreNamespace
   .document('purchases/{purchaseId}')
   .onDelete(async (snapshot, context) => {
     const purchase = snapshot.data();
@@ -570,7 +574,7 @@ export const onPurchaseDeleted = functions.firestore
         console.log('Company expense deleted:', purchaseId);
         
         // Get all users except the deleter
-        const usersSnapshot = await admin.firestore().collection('users').get();
+        const usersSnapshot = await firestoreDb.collection('users').get();
         const usersToNotify = usersSnapshot.docs
           .map(doc => doc.id)
           .filter(userId => userId !== purchase.paidById);
@@ -581,7 +585,7 @@ export const onPurchaseDeleted = functions.firestore
         }
         
         // Get deleter name
-        const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+        const deleterDoc = await firestoreDb.collection('users').doc(purchase.paidById).get();
         const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';
         
         const amount = typeof purchase.amount === 'number' ? formatCurrency(purchase.amount) : formatCurrency(0);
@@ -609,7 +613,7 @@ export const onPurchaseDeleted = functions.firestore
 
       // Regular expense handling
       // Get the user who paid for this expense
-      const deleterDoc = await admin.firestore().collection('users').doc(purchase.paidById).get();
+      const deleterDoc = await firestoreDb.collection('users').doc(purchase.paidById).get();
       const deleterName = deleterDoc.exists ? deleterDoc.data()?.name || 'Someone' : 'Someone';
 
       // Get all users who were split with (excluding the payer)
@@ -649,7 +653,7 @@ export const onPurchaseDeleted = functions.firestore
  * Cloud Function: Triggered when a settlement is updated
  * Notifies both parties involved
  */
-export const onSettlementUpdated = functions.firestore
+export const onSettlementUpdated = firestoreNamespace
   .document('settlements/{settlementId}')
   .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
@@ -666,7 +670,7 @@ export const onSettlementUpdated = functions.firestore
       }
 
       // Get the user who paid
-      const payerDoc = await admin.firestore().collection('users').doc(afterData.fromId).get();
+      const payerDoc = await firestoreDb.collection('users').doc(afterData.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
       // Build a description of what changed
@@ -701,7 +705,7 @@ export const onSettlementUpdated = functions.firestore
  * Cloud Function: Triggered when a settlement is deleted
  * Notifies the user who was supposed to receive the payment
  */
-export const onSettlementDeleted = functions.firestore
+export const onSettlementDeleted = firestoreNamespace
   .document('settlements/{settlementId}')
   .onDelete(async (snapshot, context) => {
     const settlement = snapshot.data();
@@ -717,7 +721,7 @@ export const onSettlementDeleted = functions.firestore
       }
 
       // Get the user who made the payment
-      const payerDoc = await admin.firestore().collection('users').doc(settlement.fromId).get();
+      const payerDoc = await firestoreDb.collection('users').doc(settlement.fromId).get();
       const payerName = payerDoc.exists ? payerDoc.data()?.name || 'Someone' : 'Someone';
 
       const amount = typeof settlement.amount === 'number' ? formatCurrency(settlement.amount) : formatCurrency(0);

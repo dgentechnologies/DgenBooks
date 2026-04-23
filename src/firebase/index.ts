@@ -33,10 +33,16 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  const firestoreDatabaseId =
+    process.env.NEXT_PUBLIC_FIREBASE_BOOKS_DATABASE_ID ??
+    process.env.FIREBASE_BOOKS_DATABASE_ID;
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore: firestoreDatabaseId
+      ? getFirestore(firebaseApp, firestoreDatabaseId)
+      : getFirestore(firebaseApp)
   };
 }
 

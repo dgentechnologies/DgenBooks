@@ -74,7 +74,7 @@ export function SettlementForm({ onSuccess, settlement }: SettlementFormProps) {
           amount: values.amount,
           date: values.date.toISOString(),
         };
-        await updateSettlement(firestore, settlement.id, updates);
+        await updateSettlement(firestore, settlement.fromId, settlement.id, updates);
       } else {
         // Create new settlement
         const settlementData: Omit<Settlement, 'id'> = {

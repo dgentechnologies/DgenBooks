@@ -1,4 +1,4 @@
-import { Firestore, doc, setDoc, getDoc, collection, query, getDocs } from 'firebase/firestore';
+import { Firestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { getNicknameFromFullName } from '@/lib/user-mapping';
 
@@ -49,30 +49,15 @@ export async function getUserProfile(
  * has already completed migration to a new UID. This function filters them out
  * so the UI only shows each person once.
  *
- * Note: This is limited by Firestore security rules
+ * Note: Under the current user-ownership Firestore rules, listing the /users
+ * collection is forbidden for privacy reasons. This function returns an empty
+ * array; user enumeration must be handled via a server-side mechanism (e.g. a
+ * Cloud Function or Admin SDK) if required.
  */
 export async function getAllUsers(
   firestore: Firestore
 ): Promise<User[]> {
-  try {
-    const usersRef = collection(firestore, 'users');
-    const q = query(usersRef);
-    const querySnapshot = await getDocs(q);
-    
-    const users: User[] = [];
-    querySnapshot.forEach((doc) => {
-      users.push(doc.data() as User);
-    });
-
-    // Build the set of UIDs that have been superseded by a post-migration profile.
-    const supersededUids = new Set<string>(
-      users.filter(u => u.legacyUid).map(u => u.legacyUid!)
-    );
-
-    // Return only profiles that are not orphaned legacy profiles.
-    return users.filter(u => !supersededUids.has(u.id));
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    return [];
-  }
+  // User listing is disallowed by Firestore security rules (allow list: if false).
+  // Return an empty array so callers degrade gracefully without throwing.
+  return [];
 }

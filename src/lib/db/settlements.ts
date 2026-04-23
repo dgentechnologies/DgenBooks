@@ -12,17 +12,24 @@ import type { Settlement } from '@/lib/types';
 import { notifyUsers } from '@/lib/notifications';
 
 /**
- * Create a new settlement in the shared settlements collection
+ * Create a new settlement in the user's private settlements subcollection.
+ * The document includes a `fromUserId` field (required by Firestore security rules
+ * to validate ownership) alongside the existing `fromId` field used by app logic.
  */
 export async function createSettlement(
   firestore: Firestore,
   userId: string,
   settlementData: Omit<Settlement, 'id'>
 ): Promise<string> {
-  const settlementsRef = collection(firestore, 'settlements');
+  const settlementsRef = collection(firestore, 'users', userId, 'settlements');
   
   const docRef = await addDoc(settlementsRef, {
     ...settlementData,
+    // fromUserId is required by the Firestore security rule `isCreatingValidSettlement(userId)`
+    // which validates `request.resource.data.fromUserId == userId` (the subcollection path owner).
+    // The existing `fromId` field (spread from settlementData) is used by application logic
+    // for balance calculations and display; both fields will equal `userId` for the payer.
+    fromUserId: userId,
     createdAt: serverTimestamp(),
   });
   
@@ -66,16 +73,18 @@ export async function createSettlement(
 }
 
 /**
- * Update an existing settlement
- * Only the user who paid can update their settlement
+ * Update an existing settlement in the payer's private settlements subcollection.
+ * Only the user who created the settlement (fromId / subcollection owner) can update it.
+ * @param fromId - The user ID of the settlement creator (used to locate the subcollection).
  */
 export async function updateSettlement(
   firestore: Firestore,
+  fromId: string,
   settlementId: string,
   updates: Partial<Omit<Settlement, 'id' | 'type' | 'fromId'>>
 ): Promise<void> {
   try {
-    const settlementRef = doc(firestore, `settlements/${settlementId}`);
+    const settlementRef = doc(firestore, 'users', fromId, 'settlements', settlementId);
     
     // Get current settlement data for notifications
     const currentSettlementSnap = await getDoc(settlementRef);
@@ -140,15 +149,17 @@ export async function updateSettlement(
 }
 
 /**
- * Delete a settlement
- * Only the user who paid can delete their settlement
+ * Delete a settlement from the payer's private settlements subcollection.
+ * Only the user who created the settlement (fromId / subcollection owner) can delete it.
+ * @param fromId - The user ID of the settlement creator (used to locate the subcollection).
  */
 export async function deleteSettlement(
   firestore: Firestore,
+  fromId: string,
   settlementId: string
 ): Promise<void> {
   try {
-    const settlementRef = doc(firestore, `settlements/${settlementId}`);
+    const settlementRef = doc(firestore, 'users', fromId, 'settlements', settlementId);
     
     // Get settlement data before deletion for notifications
     const settlementSnap = await getDoc(settlementRef);

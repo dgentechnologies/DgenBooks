@@ -58,7 +58,7 @@ function ActionCell({ transaction }: { transaction: Transaction }) {
         await deletePurchase(firestore, user.uid, transaction.id);
         toast.success("Expense Deleted", "The expense has been successfully deleted.");
       } else {
-        await deleteSettlement(firestore, transaction.id);
+        await deleteSettlement(firestore, (transaction as Settlement).fromId, transaction.id);
         toast.success("Settlement Deleted", "The settlement has been successfully deleted.");
       }
     } catch (error: any) {

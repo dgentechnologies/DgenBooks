@@ -50,12 +50,22 @@ export default function SignupPage() {
       
       // Map nickname to full name if applicable
       const fullName = getFullNameFromNickname(name.trim());
-      
-      // Create user profile in Firestore
-      await createUserProfile(firestore, userCredential.user.uid, {
-        name: fullName,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`,
+
+      // Attempt UID migration in case this email/name matches a legacy profile
+      const idToken = await userCredential.user.getIdToken();
+      const migrateRes = await fetch('/api/migrate-uid', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
       });
+      const migrateData = await migrateRes.json();
+
+      if (!migrateData.migrated && !migrateData.reason?.startsWith('Profile already exists')) {
+        // No legacy profile found — create a fresh profile
+        await createUserProfile(firestore, userCredential.user.uid, {
+          name: fullName,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userCredential.user.uid}`,
+        });
+      }
       
       toast.success("Success", "Account created successfully!");
       router.push("/");
@@ -87,12 +97,24 @@ export default function SignupPage() {
       // Map displayName to full name if applicable
       const displayName = result.user.displayName || 'User';
       const fullName = getFullNameFromNickname(displayName);
-      
-      // Create user profile in Firestore if it doesn't exist
-      await createUserProfile(firestore, result.user.uid, {
-        name: fullName,
-        avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
+
+      // Attempt UID migration in case this Google account matches a legacy profile
+      const idToken = await result.user.getIdToken();
+      const migrateRes = await fetch('/api/migrate-uid', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
       });
+      const migrateData = await migrateRes.json();
+
+      if (!migrateData.migrated && !migrateData.reason?.startsWith('Profile already exists')) {
+        // No legacy profile found — create a fresh profile
+        await createUserProfile(firestore, result.user.uid, {
+          name: fullName,
+          avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
+        });
+      }
+      // If migrated === true the API route already created the profile.
+      // If profile already existed (migrated === false, reason starts with "Profile already exists") — nothing to do.
       
       toast.success("Success", "Successfully signed in with Google!");
       router.push("/");

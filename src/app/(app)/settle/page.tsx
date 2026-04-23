@@ -19,7 +19,7 @@ export default function SettleUpPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
-  const { users, isLoading: usersLoading } = useUsers();
+  const { users, isLoading: usersLoading, uidMapping } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -33,7 +33,7 @@ export default function SettleUpPage() {
     return allTransactions;
   }, [purchases, settlements]);
 
-  const { debts } = useMemo(() => calculateBalances(transactions, users), [transactions, users]);
+  const { debts } = useMemo(() => calculateBalances(transactions, users, uidMapping), [transactions, users, uidMapping]);
 
   const handleSettle = async (debt: Debt, customAmount?: number) => {
     if (!user) return;

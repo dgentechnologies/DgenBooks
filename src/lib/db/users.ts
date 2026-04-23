@@ -38,42 +38,6 @@ export async function getUserProfile(
   return null;
 }
 
-/**
- * Find a legacy user profile from a previous Firebase project migration.
- * Searches all user profiles for one that matches the given email or full name,
- * excluding the current UID and any profile that is itself already a post-migration
- * profile (i.e. has a legacyUid of its own).
- *
- * Email is checked first (more reliable); name matching is used as a fallback
- * for migrated profiles that were created before emails were stored.
- */
-export async function findLegacyUserProfile(
-  firestore: Firestore,
-  currentUid: string,
-  email: string | null,
-  name: string
-): Promise<User | null> {
-  const usersRef = collection(firestore, 'users');
-  const snapshot = await getDocs(usersRef);
-
-  let byEmail: User | null = null;
-  let byName: User | null = null;
-
-  for (const docSnap of snapshot.docs) {
-    const user = docSnap.data() as User;
-    if (user.id === currentUid) continue; // skip own (new) profile if it somehow exists
-    if (user.legacyUid) continue; // skip post-migration profiles — they already have a new UID
-
-    if (email && user.email === email && !byEmail) {
-      byEmail = user;
-    }
-    if (user.name.toLowerCase() === name.toLowerCase() && !byName) {
-      byName = user;
-    }
-  }
-
-  return byEmail ?? byName ?? null;
-}
 
 /**
  * Get all active (non-legacy) users.

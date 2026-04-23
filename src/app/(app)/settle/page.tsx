@@ -19,7 +19,6 @@ export default function SettleUpPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
-  const { users, isLoading: usersLoading, uidMapping } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -32,6 +31,10 @@ export default function SettleUpPage() {
     }
     return allTransactions;
   }, [purchases, settlements]);
+
+  // Fetch user profiles for all participants referenced in the transactions.
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const { users, isLoading: usersLoading, uidMapping } = useUsers(transactions, transactionsReady);
 
   const { debts } = useMemo(() => calculateBalances(transactions, users, uidMapping), [transactions, users, uidMapping]);
 

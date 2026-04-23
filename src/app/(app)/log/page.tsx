@@ -18,7 +18,6 @@ export default function ExpenseLogPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
-  const { users, isLoading: usersLoading } = useUsers();
   
   // THREE-STEP PIPELINE for Visual Merging (Modified for Expense Log)
   // In the expense log, we want to show BOTH the crossed-out expense AND the settlement row
@@ -40,6 +39,10 @@ export default function ExpenseLogPage() {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [purchases, settlements]);
+
+  // Fetch user profiles for all participants referenced in the transactions.
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const { users, isLoading: usersLoading } = useUsers(transactions, transactionsReady);
 
   // STEP 1: Create a "Lookup Set" of all settled expense IDs
   // Force conversion to String to prevent type errors

@@ -121,11 +121,50 @@ service cloud.firestore {
      * @principle Enforces self-creation and ownership of a user's own profile document and prevents user enumeration.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      // Any authenticated user may fetch an individual profile by UID so that
+      // balance calculations (which need all participants' names) work correctly.
+      // Listing all users is still forbidden to protect against user enumeration.
+      allow get: if isSignedIn();
       allow list: if false;
       allow create: if isCreatingValidUser(userId);
       allow update: if isExistingOwner(userId) && isUpdatingValidUser();
       allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Legacy top-level purchases collection from the pre-migration
+     * Firebase project.  Documents here are read-only from the client; all new
+     * purchases go into /users/{userId}/purchases subcollections.
+     * A user may read a purchase document if they are the payer OR a participant.
+     */
+    match /purchases/{purchaseId} {
+      allow get: if isSignedIn() && (
+        resource.data.paidById == request.auth.uid ||
+        request.auth.uid in resource.data.splitWith
+      );
+      allow list: if isSignedIn() && (
+        resource.data.paidById == request.auth.uid ||
+        request.auth.uid in resource.data.splitWith
+      );
+      allow write: if false;
+    }
+
+    /**
+     * @description Legacy top-level settlements collection from the pre-migration
+     * Firebase project.  Documents here are read-only from the client; all new
+     * settlements go into /users/{userId}/settlements subcollections.
+     * A user may read a settlement document if they are the sender or receiver.
+     */
+    match /settlements/{settlementId} {
+      allow get: if isSignedIn() && (
+        resource.data.fromId == request.auth.uid ||
+        resource.data.toId == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        resource.data.fromId == request.auth.uid ||
+        resource.data.toId == request.auth.uid
+      );
+      allow write: if false;
     }
 
     /**

@@ -11,14 +11,14 @@ console.log('SW: Firebase scripts imported');
 // Initialize Firebase in the service worker
 // Note: Service workers don't have access to environment variables
 // This configuration matches the client-side config in src/firebase/config.ts
+// and the NEXT_PUBLIC_FIREBASE_* environment variables set in Vercel.
 firebase.initializeApp({
-  apiKey: "AIzaSyBrQ8CJrO0cRlmW_aI4qg1xxf0bg7AoIeQ",
-  authDomain: "dgenbooks.firebaseapp.com",
-  projectId: "dgenbooks",
-  storageBucket: "dgenbooks.firebasestorage.app",
-  messagingSenderId: "261197764556",
-  appId: "1:261197764556:web:a5ea8cf6d7d1ea58ac6f69",
-  measurementId: "G-6VB11GMWP4"
+  apiKey: "AIzaSyCmCh_GKhbpGQWGsrqk5oVVVTcEmHicPBE",
+  authDomain: "dgen-superadmin.firebaseapp.com",
+  projectId: "dgen-superadmin",
+  storageBucket: "dgen-superadmin.firebasestorage.app",
+  messagingSenderId: "182536604083",
+  appId: "1:182536604083:web:95590b24af9905b696a3c6",
 });
 
 console.log('SW: Firebase initialized');

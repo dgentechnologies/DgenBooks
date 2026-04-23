@@ -1,35 +1,29 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
-// Initialize Firebase Admin with the service account from environment variable
+// Initialize Firebase Admin with individual service-account environment variables
 if (!admin.apps.length) {
   try {
-    // Check if FIREBASE_SERVICE_ACCOUNT environment variable exists
-    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-    
-    if (!serviceAccountEnv) {
-      console.error('❌ FIREBASE_SERVICE_ACCOUNT environment variable not found!');
-      console.error('Please set FIREBASE_SERVICE_ACCOUNT in your environment variables.');
+    const projectId = process.env.FIREBASE_BOOKS_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_BOOKS_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_BOOKS_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+    // Validate required fields
+    if (!projectId || !clientEmail || !privateKey) {
+      console.error('❌ Missing Firebase Admin environment variables!');
+      console.error('Required: FIREBASE_BOOKS_PROJECT_ID, FIREBASE_BOOKS_CLIENT_EMAIL, FIREBASE_BOOKS_PRIVATE_KEY');
     } else {
-      console.log('✅ FIREBASE_SERVICE_ACCOUNT environment variable found');
-      console.log(`📏 FIREBASE_SERVICE_ACCOUNT length: ${serviceAccountEnv.length} characters`);
+      console.log('✅ Firebase Admin environment variables found');
+      console.log(`📋 Project ID: ${projectId}`);
+      console.log(`📧 Client Email: ${clientEmail}`);
     }
-    
-    const serviceAccount = JSON.parse(serviceAccountEnv || '{}');
-    
-    // Validate service account has required fields
-    if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
-      console.error('❌ FIREBASE_SERVICE_ACCOUNT is missing required fields!');
-      console.error('Required fields: project_id, private_key, client_email');
-      console.error('Found fields:', Object.keys(serviceAccount));
-    } else {
-      console.log('✅ FIREBASE_SERVICE_ACCOUNT has all required fields');
-      console.log(`📋 Project ID: ${serviceAccount.project_id}`);
-      console.log(`📧 Client Email: ${serviceAccount.client_email}`);
-    }
-    
+
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
     });
     console.log('✅ Firebase Admin SDK initialized successfully');
   } catch (error) {

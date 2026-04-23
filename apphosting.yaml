@@ -5,3 +5,14 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+env:
+  # The Firestore database ID to use for the app.
+  # Set the secret value in Google Cloud Secret Manager under the name
+  # "firebase-books-database-id" with the Firestore database ID
+  # (e.g. "(default)" or a named database such as "dgenbooks").
+  - variable: NEXT_PUBLIC_FIREBASE_BOOKS_DATABASE_ID
+    secret: firebase-books-database-id
+    availability:
+      - BUILD
+      - RUNTIME

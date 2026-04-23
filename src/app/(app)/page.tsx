@@ -22,7 +22,6 @@ export default function DashboardPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
-  const { users, isLoading: usersLoading, uidMapping } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -38,6 +37,12 @@ export default function DashboardPage() {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [purchases, settlements]);
+
+  // Fetch user profiles for all participants referenced in the transactions.
+  // transactionsReady is true only once both data sources have finished loading,
+  // so useUsers knows when it is safe to derive the UID list.
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const { users, isLoading: usersLoading, uidMapping } = useUsers(transactions, transactionsReady);
 
   const { netBalances } = useMemo(() => calculateBalances(transactions, users, uidMapping), [transactions, users, uidMapping]);
   const myNetBalance = netBalances?.get(user?.uid || '') || 0;

@@ -3,6 +3,8 @@ export type User = {
   name: string;
   avatar: string;
   nickname?: string; // Optional nickname field for backwards compatibility
+  email?: string; // Used for cross-project UID migration matching
+  legacyUid?: string; // Previous Firebase UID from old project (set during post-migration login)
   fcmTokens?: string[]; // Array of FCM tokens for multi-device support
   lastTokenUpdate?: string; // ISO string of last token update
 };

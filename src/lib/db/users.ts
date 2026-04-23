@@ -38,10 +38,18 @@ export async function getUserProfile(
   return null;
 }
 
+
 /**
- * Get all users (for split selection)
- * Note: This is limited by Firestore rules that prevent listing all users
- * In production, consider using a different approach or caching
+ * Get all active (non-legacy) users.
+ *
+ * After a Firebase project migration, orphaned old-project user profiles may
+ * still exist in the database (they cannot be deleted because the original UID
+ * no longer exists in Firebase Auth). A profile is considered orphaned when its
+ * `id` appears as the `legacyUid` field of another profile — meaning the user
+ * has already completed migration to a new UID. This function filters them out
+ * so the UI only shows each person once.
+ *
+ * Note: This is limited by Firestore security rules
  */
 export async function getAllUsers(
   firestore: Firestore
@@ -55,8 +63,14 @@ export async function getAllUsers(
     querySnapshot.forEach((doc) => {
       users.push(doc.data() as User);
     });
-    
-    return users;
+
+    // Build the set of UIDs that have been superseded by a post-migration profile.
+    const supersededUids = new Set<string>(
+      users.filter(u => u.legacyUid).map(u => u.legacyUid!)
+    );
+
+    // Return only profiles that are not orphaned legacy profiles.
+    return users.filter(u => !supersededUids.has(u.id));
   } catch (error) {
     console.error('Error fetching users:', error);
     return [];

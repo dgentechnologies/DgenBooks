@@ -22,7 +22,7 @@ export default function DashboardPage() {
   // Fetch purchases and settlements from Firebase
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
-  const { users, isLoading: usersLoading } = useUsers();
+  const { users, isLoading: usersLoading, uidMapping } = useUsers();
   
   // Combine purchases and settlements into transactions
   const transactions = useMemo(() => {
@@ -39,7 +39,7 @@ export default function DashboardPage() {
     );
   }, [purchases, settlements]);
 
-  const { netBalances } = useMemo(() => calculateBalances(transactions, users), [transactions, users]);
+  const { netBalances } = useMemo(() => calculateBalances(transactions, users, uidMapping), [transactions, users, uidMapping]);
   const myNetBalance = netBalances?.get(user?.uid || '') || 0;
 
   // Keyboard shortcuts

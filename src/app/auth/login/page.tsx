@@ -63,12 +63,26 @@ export default function LoginPage() {
       // Map displayName to full name if applicable
       const displayName = result.user.displayName || 'User';
       const fullName = getFullNameFromNickname(displayName);
-      
-      // Create user profile in Firestore if it doesn't exist
-      await createUserProfile(firestore, result.user.uid, {
-        name: fullName,
-        avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
+
+      // Attempt UID migration (no-op if profile already exists for this UID).
+      // The API route uses the Admin SDK to update all Firestore documents that
+      // still reference the old project UID and re-creates the user profile.
+      const idToken = await result.user.getIdToken();
+      const migrateRes = await fetch('/api/migrate-uid', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
       });
+      const migrateData = await migrateRes.json();
+
+      if (!migrateData.migrated && !migrateData.reason?.startsWith('Profile already exists')) {
+        // Truly new user — create a fresh profile
+        await createUserProfile(firestore, result.user.uid, {
+          name: fullName,
+          avatar: result.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.user.uid}`,
+        });
+      }
+      // If migrated === true the API route already created the profile.
+      // If profile already existed (migrated === false, reason = "Profile already exists") — nothing to do.
       
       toast.success("Success", "Successfully logged in with Google!");
       router.push("/");

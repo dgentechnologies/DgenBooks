@@ -1,11 +1,12 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin
 admin.initializeApp();
 
 const booksDatabaseId = process.env.FIREBASE_BOOKS_DATABASE_ID || '(default)';
-const firestoreDb = admin.firestore(booksDatabaseId);
+const firestoreDb = getFirestore(booksDatabaseId);
 const firestoreNamespace = functions.firestore.database(booksDatabaseId);
 
 // Shared currency formatter instance for better performance

@@ -5,7 +5,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 // Initialize Firebase Admin
 admin.initializeApp();
 
-const firestoreDatabaseId = process.env.FIREBASE_BOOKS_DATABASE_ID || '(default)';
+const DEFAULT_FIRESTORE_DATABASE = '(default)';
+const firestoreDatabaseId = process.env.FIREBASE_BOOKS_DATABASE_ID || DEFAULT_FIRESTORE_DATABASE;
 const firestoreDb = getFirestore(firestoreDatabaseId);
 const firestoreNamespace = functions.firestore.database(firestoreDatabaseId);
 

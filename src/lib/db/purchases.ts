@@ -6,7 +6,6 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
-  getDocs,
   serverTimestamp
 } from 'firebase/firestore';
 import type { Purchase } from '@/lib/types';
@@ -16,20 +15,20 @@ import { notifyUsers } from '@/lib/notifications';
  * Get all user IDs from the users collection
  */
 async function getAllUserIds(firestore: Firestore): Promise<string[]> {
-  const usersRef = collection(firestore, 'users');
-  const snapshot = await getDocs(usersRef);
-  return snapshot.docs.map(doc => doc.id);
+  // Under the user-ownership rules, listing the /users collection is forbidden.
+  // Return an empty array so notification code degrades gracefully.
+  return [];
 }
 
 /**
- * Create a new purchase in the shared purchases collection
+ * Create a new purchase in the user's private purchases subcollection
  */
 export async function createPurchase(
   firestore: Firestore,
   userId: string,
   purchaseData: Omit<Purchase, 'id'>
 ): Promise<string> {
-  const purchasesRef = collection(firestore, 'purchases');
+  const purchasesRef = collection(firestore, 'users', userId, 'purchases');
   
   const docRef = await addDoc(purchasesRef, {
     ...purchaseData,
@@ -136,9 +135,8 @@ export async function createPurchase(
 }
 
 /**
- * Update an existing purchase
- * For single-payer: Only the user who paid can update
- * For multi-payer: Any of the payers can update
+ * Update an existing purchase in the user's private purchases subcollection.
+ * Only the user who paid (the subcollection owner) can update the record.
  */
 export async function updatePurchase(
   firestore: Firestore,
@@ -147,7 +145,7 @@ export async function updatePurchase(
   updates: Partial<Omit<Purchase, 'id' | 'type' | 'paidById' | 'paymentType'>>
 ): Promise<void> {
   try {
-    const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
+    const purchaseRef = doc(firestore, 'users', userId, 'purchases', purchaseId);
     
     // Get current purchase data for notifications
     const currentPurchaseSnap = await getDoc(purchaseRef);
@@ -284,8 +282,8 @@ export async function updatePurchase(
 }
 
 /**
- * Delete a purchase
- * Only the user who paid can delete their purchase
+ * Delete a purchase from the user's private purchases subcollection.
+ * Only the user who paid (the subcollection owner) can delete the record.
  */
 export async function deletePurchase(
   firestore: Firestore,
@@ -293,7 +291,7 @@ export async function deletePurchase(
   purchaseId: string
 ): Promise<void> {
   try {
-    const purchaseRef = doc(firestore, `purchases/${purchaseId}`);
+    const purchaseRef = doc(firestore, 'users', userId, 'purchases', purchaseId);
     
     // Get purchase data before deletion for notifications
     const purchaseSnap = await getDoc(purchaseRef);

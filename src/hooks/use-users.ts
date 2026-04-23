@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFirestore } from '@/firebase';
 import { getAllUsers } from '@/lib/db';
 import type { User } from '@/lib/types';
 
 /**
- * Hook to fetch all users for the app
+ * Hook to fetch all users for the app.
+ * Also derives a UID mapping (legacyUid → currentUid) to resolve old project UIDs
+ * that may still appear in migrated Firestore documents.
  * Note: This is limited by Firestore security rules
  */
 export function useUsers() {
@@ -43,6 +45,19 @@ export function useUsers() {
       mounted = false;
     };
   }, [firestore]);
+
+  // Build a mapping of legacyUid → currentUid so that balance calculations can
+  // attribute historical Firestore documents (which still carry old project UIDs)
+  // to the correct current user.
+  const uidMapping = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of users) {
+      if (u.legacyUid) {
+        map.set(u.legacyUid, u.id);
+      }
+    }
+    return map;
+  }, [users]);
   
-  return { users, isLoading, error };
+  return { users, isLoading, error, uidMapping };
 }

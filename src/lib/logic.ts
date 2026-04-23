@@ -1,6 +1,18 @@
 import type { Transaction, User, Debt } from './types';
 
-export function calculateBalances(transactions: Transaction[], users: User[]): { netBalances: Map<string, number>, debts: Debt[] } {
+/**
+ * Normalise a UID using the optional mapping that translates legacy UIDs (from a
+ * previous Firebase project) to the corresponding current UIDs.
+ */
+function resolveUid(uid: string, uidMapping: Map<string, string>): string {
+  return uidMapping.get(uid) ?? uid;
+}
+
+export function calculateBalances(
+  transactions: Transaction[],
+  users: User[],
+  uidMapping: Map<string, string> = new Map()
+): { netBalances: Map<string, number>, debts: Debt[] } {
   const balances = new Map<string, Map<string, number>>();
   const userIds = new Set(users.map(u => u.id));
 
@@ -15,7 +27,9 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
 
   for (const transaction of transactions) {
     if (transaction.type === 'purchase') {
-      const { paidById, amount, splitWith, paymentType, paidByAmounts, paidByCompany } = transaction;
+      const { amount, splitWith, paymentType, paidByAmounts, paidByCompany } = transaction;
+      // Resolve the single payer UID through the mapping (handles legacy UIDs)
+      const paidById = resolveUid(transaction.paidById, uidMapping);
       
       // Skip company-paid expenses from balance calculations
       if (paidByCompany === true || paymentType === 'company') {
@@ -29,11 +43,13 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
       // Handle multi-person payment
       if (paymentType === 'multiple' && paidByAmounts) {
         // For each payer, calculate what they're owed
-        for (const [payerId, amountPaid] of Object.entries(paidByAmounts)) {
+        for (const [rawPayerId, amountPaid] of Object.entries(paidByAmounts)) {
+          const payerId = resolveUid(rawPayerId, uidMapping);
           if (!userIds.has(payerId)) continue;
           
           // Calculate what this payer is owed from each participant
-          for (const participantId of splitWith) {
+          for (const rawParticipantId of splitWith) {
+            const participantId = resolveUid(rawParticipantId, uidMapping);
             if (participantId !== payerId && userIds.has(participantId)) {
               const participantBalance = balances.get(participantId);
               const currentOwedToPayer = participantBalance?.get(payerId);
@@ -52,7 +68,8 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
         // Skip transaction if paidById is not in users
         if (!userIds.has(paidById)) continue;
 
-        for (const participantId of splitWith) {
+        for (const rawParticipantId of splitWith) {
+          const participantId = resolveUid(rawParticipantId, uidMapping);
           if (participantId !== paidById && userIds.has(participantId)) {
             const participantBalance = balances.get(participantId);
             const currentOwedToPayer = participantBalance?.get(paidById);
@@ -63,7 +80,10 @@ export function calculateBalances(transactions: Transaction[], users: User[]): {
         }
       }
     } else if (transaction.type === 'settlement') {
-      const { fromId, toId, amount } = transaction;
+      // Resolve both sides of the settlement through the UID mapping
+      const fromId = resolveUid(transaction.fromId, uidMapping);
+      const toId = resolveUid(transaction.toId, uidMapping);
+      const { amount } = transaction;
       // Skip transaction if either user is not in users
       if (!userIds.has(fromId) || !userIds.has(toId)) continue;
       

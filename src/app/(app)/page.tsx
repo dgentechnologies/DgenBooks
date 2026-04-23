@@ -39,7 +39,7 @@ export default function DashboardPage() {
     );
   }, [purchases, settlements]);
 
-  const { netBalances } = useMemo(() => calculateBalances(transactions, users), [transactions, users]);
+  const { netBalances } = useMemo(() => calculateBalances(transactions, users, uidMapping), [transactions, users, uidMapping]);
   const myNetBalance = netBalances?.get(user?.uid || '') || 0;
 
   // Keyboard shortcuts

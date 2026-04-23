@@ -5,9 +5,9 @@ import { getFirestore } from 'firebase-admin/firestore';
 // Initialize Firebase Admin
 admin.initializeApp();
 
-const booksDatabaseId = process.env.FIREBASE_BOOKS_DATABASE_ID || '(default)';
-const firestoreDb = getFirestore(booksDatabaseId);
-const firestoreNamespace = functions.firestore.database(booksDatabaseId);
+const firestoreDatabaseId = process.env.FIREBASE_BOOKS_DATABASE_ID || '(default)';
+const firestoreDb = getFirestore(firestoreDatabaseId);
+const firestoreNamespace = functions.firestore.database(firestoreDatabaseId);
 
 // Shared currency formatter instance for better performance
 const currencyFormatter = new Intl.NumberFormat('en-IN', {

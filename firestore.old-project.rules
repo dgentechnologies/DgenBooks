@@ -1,0 +1,27 @@
+/**
+ * TEMPORARY rules for the OLD "dgenbooks" Firebase project.
+ *
+ * Purpose: Allow unauthenticated reads on all collections so the migration
+ * script at /api/migrate-from-old-db can pull every document via the
+ * Firestore REST API without needing a service-account credential.
+ *
+ * ⚠️  IMPORTANT – deploy these rules to the OLD project ONLY, then revert
+ * them (or delete the project) once migration is confirmed complete.
+ *
+ * Deploy command (run from the repo root):
+ *   firebase deploy --only firestore:rules \
+ *     --project dgenbooks \
+ *     --config firebase.old-project.json
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow anyone to read any document or collection.
+    // Writes remain fully blocked so no data can be accidentally modified.
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

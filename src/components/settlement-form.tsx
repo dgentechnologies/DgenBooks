@@ -20,10 +20,12 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useUsers } from "@/hooks/use-users";
+import { useUserPurchases } from "@/hooks/use-purchases";
+import { useUserSettlements } from "@/hooks/use-settlements";
 import { useUser, useFirestore } from "@/firebase";
 import { createSettlement, updateSettlement } from "@/lib/db/settlements";
-import type { Settlement } from "@/lib/types";
-import { useState } from "react";
+import type { Settlement, Transaction } from "@/lib/types";
+import { useState, useMemo } from "react";
 import { formatName } from "@/lib/format";
 import { toast } from "@/lib/toast";
 
@@ -42,7 +44,14 @@ interface SettlementFormProps {
 export function SettlementForm({ onSuccess, settlement }: SettlementFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const { users, isLoading: usersLoading } = useUsers();
+  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
+  const { data: settlementsData, isLoading: settlementsLoading } = useUserSettlements();
+  const allTransactions = useMemo<Transaction[]>(
+    () => [...(purchases ?? []), ...(settlementsData ?? [])],
+    [purchases, settlementsData]
+  );
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const { users, isLoading: usersLoading } = useUsers(allTransactions, transactionsReady);
   const { user } = useUser();
   const firestore = useFirestore();
 

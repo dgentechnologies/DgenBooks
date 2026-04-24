@@ -26,7 +26,15 @@ export default function ProfilePage() {
   // Fetch data for stats
   const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
   const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
-  const { users, isLoading: usersLoading } = useUsers();
+
+  // Combine into a single transactions array for useUsers
+  const allTransactions = useMemo<Transaction[]>(
+    () => [...(purchases ?? []), ...(settlements ?? [])],
+    [purchases, settlements]
+  );
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+
+  const { users, isLoading: usersLoading } = useUsers(allTransactions, transactionsReady);
 
   // Calculate stats
   const { 

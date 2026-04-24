@@ -27,8 +27,10 @@ import { useUsers } from "@/hooks/use-users";
 import { useCategories } from "@/hooks/use-categories";
 import { useUser, useFirestore } from "@/firebase";
 import { createPurchase, updatePurchase } from "@/lib/db";
-import type { Purchase } from "@/lib/types";
-import { useState, useEffect } from "react";
+import type { Purchase, Transaction } from "@/lib/types";
+import { useUserPurchases } from "@/hooks/use-purchases";
+import { useUserSettlements } from "@/hooks/use-settlements";
+import { useState, useEffect, useMemo } from "react";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatName } from "@/lib/format";
 import { toast } from "@/lib/toast";
@@ -93,7 +95,14 @@ interface ExpenseFormProps {
 export function ExpenseForm({ onSave, onSuccess, expense, prefillData }: ExpenseFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const { users, isLoading: usersLoading } = useUsers();
+  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
+  const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  const allTransactions = useMemo<Transaction[]>(
+    () => [...(purchases ?? []), ...(settlements ?? [])],
+    [purchases, settlements]
+  );
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const { users, isLoading: usersLoading } = useUsers(allTransactions, transactionsReady);
   const { categories, isLoading: categoriesLoading } = useCategories();
   const { user } = useUser();
   const firestore = useFirestore();

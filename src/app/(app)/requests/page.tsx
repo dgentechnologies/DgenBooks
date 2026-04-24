@@ -1,20 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2, ShoppingBag, AlertCircle } from "lucide-react";
 import { usePurchaseRequests } from "@/hooks/use-purchase-requests";
 import { useUsers } from "@/hooks/use-users";
+import { useUserPurchases } from "@/hooks/use-purchases";
+import { useUserSettlements } from "@/hooks/use-settlements";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RequestItemForm } from "@/components/request-item-form";
 import { PurchaseRequestCard } from "@/components/purchase-request-card";
 import { toast } from "@/lib/toast";
+import type { Transaction } from "@/lib/types";
 
 export default function PurchaseRequestsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { data: requests, isLoading } = usePurchaseRequests();
-  const { users, isLoading: usersLoading } = useUsers();
+  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
+  const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  const allTransactions = useMemo<Transaction[]>(
+    () => [...(purchases ?? []), ...(settlements ?? [])],
+    [purchases, settlements]
+  );
+  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const { users, isLoading: usersLoading } = useUsers(allTransactions, transactionsReady);
 
   const handleRequestSuccess = () => {
     setIsAddDialogOpen(false);

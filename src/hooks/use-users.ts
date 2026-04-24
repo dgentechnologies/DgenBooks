@@ -60,7 +60,7 @@ export function useUsers(transactions: Transaction[] = [], transactionsReady = f
       return;
     }
 
-    const uids = uidsKey.split(',');
+    const uids = uidsKey.split(',').filter(Boolean);
 
     if (uids.length === 0) {
       setUsers([]);

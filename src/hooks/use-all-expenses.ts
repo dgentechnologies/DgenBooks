@@ -85,4 +85,3 @@ export function useAllExpenses() {
 
   return { purchases, settlements, isLoading, error };
 }
-

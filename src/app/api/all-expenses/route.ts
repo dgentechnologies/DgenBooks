@@ -5,7 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import type { Purchase, Settlement } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
-// Firebase Admin initialisation (shared across requests in the same process)
+// Firebase Admin initialization (shared across requests in the same process)
 // ---------------------------------------------------------------------------
 
 function getAdminApp(): admin.app.App {
@@ -56,6 +56,8 @@ export async function GET(request: Request) {
     const idToken = authHeader.slice(7);
     try {
       const app = getAdminApp();
+      // Any authenticated team member may read all expenses — this is intentional
+      // for a shared team expense tracker where full visibility is required.
       await getAuth(app).verifyIdToken(idToken);
     } catch {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });

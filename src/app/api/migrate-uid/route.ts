@@ -45,6 +45,22 @@ const KNOWN_FULL_NAMES: Record<string, string> = {
   sagnik: 'Sagnik Mondal',
 };
 
+// ---------------------------------------------------------------------------
+// Manual UID override map
+//
+// When name-based matching cannot find the old Firestore profile (e.g. the
+// old document's name field doesn't match the Auth display name, or the old
+// UID was never registered in Firebase Auth), an admin can add an explicit
+// newUid → oldUid mapping here so that migration bypasses the name-search
+// passes entirely and goes straight to the correct document.
+//
+// Format:  '<new Firebase Auth UID>': '<old Firestore-only UID>'
+// ---------------------------------------------------------------------------
+
+const UID_OVERRIDES: Record<string, string> = {
+  DUHBEYpqD1W0oInXMvVIrgN5pfG2: 'ciDMFkpaRabBJp3pcftKNv17gmu1',
+};
+
 /** Resolve a raw display name to its canonical full name. */
 function resolveFullName(displayName: string): string {
   const lower = displayName.toLowerCase().trim();
@@ -104,14 +120,13 @@ export async function POST(request: Request) {
     }
 
     // -----------------------------------------------------------------------
-    // 3. Find the old profile by matching the canonical full name OR the
-    //    nickname. Profiles created before the nickname→full-name mapping was
-    //    applied may be stored with the raw nickname (e.g. "tirtha") instead
-    //    of the full name ("Tirthankar Dasgupta"). We accept both so that
-    //    users who signed up pre-mapping are still correctly migrated.
-    //    Skip post-migration profiles (they already carry a legacyUid field).
+    // 3. Find the old profile.
     //
-    //    Two-pass strategy:
+    //    Pass 0 – check the hardcoded UID_OVERRIDES map first. This covers
+    //             cases where name-based matching cannot work (e.g. the old
+    //             Firestore document's name field doesn't match the Auth
+    //             display name, or the old UID was never in Firebase Auth).
+    //
     //    Pass 1 – prefer a profile whose name IS the nickname (old-project
     //             profiles store the raw nickname as the name field). These
     //             are the profiles that hold the actual expense/settlement
@@ -127,6 +142,17 @@ export async function POST(request: Request) {
     const usersSnap = await db.collection('users').get();
     let oldUid: string | null = null;
     let oldProfileData: Record<string, unknown> = {};
+
+    // Pass 0: hardcoded override (bypasses all name-matching).
+    if (UID_OVERRIDES[newUid]) {
+      const overrideOldUid = UID_OVERRIDES[newUid];
+      const overrideSnap = usersSnap.docs.find((d) => d.id === overrideOldUid);
+      if (overrideSnap) {
+        oldUid = overrideOldUid;
+        oldProfileData = overrideSnap.data();
+        console.log(`[migrate-uid] Pass 0 override: mapping ${newUid} → ${oldUid}`);
+      }
+    }
 
     // Derive the nickname for the current user (if they are a known user).
     const nickname =

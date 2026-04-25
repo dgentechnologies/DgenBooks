@@ -104,24 +104,67 @@ export async function POST(request: Request) {
     }
 
     // -----------------------------------------------------------------------
-    // 3. Find the old profile by matching the canonical full name
+    // 3. Find the old profile by matching the canonical full name OR the
+    //    nickname. Profiles created before the nickname→full-name mapping was
+    //    applied may be stored with the raw nickname (e.g. "tirtha") instead
+    //    of the full name ("Tirthankar Dasgupta"). We accept both so that
+    //    users who signed up pre-mapping are still correctly migrated.
     //    Skip post-migration profiles (they already carry a legacyUid field).
+    //
+    //    Two-pass strategy:
+    //    Pass 1 – prefer a profile whose name IS the nickname (old-project
+    //             profiles store the raw nickname as the name field). These
+    //             are the profiles that hold the actual expense/settlement
+    //             data and must be migrated first.
+    //    Pass 2 – fall back to matching by canonical full name (covers the
+    //             normal case where the full name was already stored).
+    //
+    //    This ordering ensures that if a previous failed-migration attempt
+    //    created an orphaned profile with the full name but no expense data,
+    //    the original old-project profile (with expense data) is always
+    //    chosen over the orphaned one.
     // -----------------------------------------------------------------------
     const usersSnap = await db.collection('users').get();
     let oldUid: string | null = null;
     let oldProfileData: Record<string, unknown> = {};
 
-    for (const docSnap of usersSnap.docs) {
-      const data = docSnap.data();
-      if (data.id === newUid) continue;       // skip if it somehow matches new UID
-      if (data.legacyUid) continue;           // skip already-migrated profiles
-      if (
-        typeof data.name === 'string' &&
-        data.name.toLowerCase() === fullName.toLowerCase()
-      ) {
-        oldUid = docSnap.id;
-        oldProfileData = data;
-        break;
+    // Derive the nickname for the current user (if they are a known user).
+    const nickname =
+      Object.keys(KNOWN_FULL_NAMES).find(
+        (k) => KNOWN_FULL_NAMES[k].toLowerCase() === fullName.toLowerCase()
+      ) ?? '';
+
+    // Pass 1: look for a profile stored with the raw nickname as its name.
+    if (nickname) {
+      for (const docSnap of usersSnap.docs) {
+        const data = docSnap.data();
+        if (data.id === newUid) continue;
+        if (data.legacyUid) continue;
+        if (
+          typeof data.name === 'string' &&
+          data.name.toLowerCase() === nickname.toLowerCase()
+        ) {
+          oldUid = docSnap.id;
+          oldProfileData = data;
+          break;
+        }
+      }
+    }
+
+    // Pass 2: fall back to matching by canonical full name.
+    if (!oldUid) {
+      for (const docSnap of usersSnap.docs) {
+        const data = docSnap.data();
+        if (data.id === newUid) continue;
+        if (data.legacyUid) continue;
+        if (
+          typeof data.name === 'string' &&
+          data.name.toLowerCase() === fullName.toLowerCase()
+        ) {
+          oldUid = docSnap.id;
+          oldProfileData = data;
+          break;
+        }
       }
     }
 
@@ -286,11 +329,15 @@ export async function POST(request: Request) {
       batch.delete(catDoc.ref);
     }
 
-    // Re-create user profile under new UID, preserving all existing fields
+    // Re-create user profile under new UID, preserving all existing fields.
+    // Always store the canonical full name so that profiles created with a
+    // raw nickname (e.g. "tirtha") before the mapping was applied are
+    // normalised on first post-migration login.
     const { id: _oldProfileId, ...rest } = oldProfileData;
     batch.set(newProfileRef, {
       ...rest,
       id: newUid,
+      name: fullName,
       legacyUid: oldUid, // keeps a record of the old UID
     });
 

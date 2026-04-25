@@ -168,6 +168,36 @@ export async function POST(request: Request) {
       }
     }
 
+    // Pass 3: look for a post-migration profile (one that already carries a
+    // legacyUid) that matches by name or nickname.  This handles the case where
+    // the same person logs in with yet another new UID (e.g. they cleared app
+    // data, re-authenticated, or signed in via a different credential) and their
+    // current profile was already migrated once before.  Passes 1 & 2 skip such
+    // profiles intentionally; this pass catches them as a fallback.
+    if (!oldUid) {
+      for (const docSnap of usersSnap.docs) {
+        const data = docSnap.data();
+        if (data.id === newUid) continue;
+        // Only consider profiles that already carry a legacyUid.
+        if (!data.legacyUid) continue;
+        // Previously-migrated profiles always store the canonical full name,
+        // so only match against fullName here (not against the raw nickname).
+        const nameMatches =
+          typeof data.name === 'string' &&
+          data.name.toLowerCase() === fullName.toLowerCase();
+        // Also check the explicit nickname field in case the profile stores it.
+        const nicknameMatches =
+          nickname &&
+          typeof data.nickname === 'string' &&
+          data.nickname.toLowerCase() === nickname.toLowerCase();
+        if (nameMatches || nicknameMatches) {
+          oldUid = docSnap.id;
+          oldProfileData = data;
+          break;
+        }
+      }
+    }
+
     if (!oldUid) {
       return NextResponse.json({ migrated: false, reason: 'No legacy profile found for name: ' + fullName });
     }

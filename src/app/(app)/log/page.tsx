@@ -5,8 +5,7 @@ import type { Transaction } from '@/lib/types';
 import { DataTable } from './data-table';
 import { createColumns } from './columns';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUserPurchases } from '@/hooks/use-purchases';
-import { useUserSettlements } from '@/hooks/use-settlements';
+import { useAllExpenses } from '@/hooks/use-all-expenses';
 import { useUsers } from '@/hooks/use-users';
 import { useUser } from '@/firebase';
 import { Loader2 } from 'lucide-react';
@@ -15,9 +14,8 @@ export default function ExpenseLogPage() {
   const [filter, setFilter] = useState('all');
   const { user } = useUser();
   
-  // Fetch purchases and settlements from Firebase
-  const { data: purchases, isLoading: purchasesLoading } = useUserPurchases();
-  const { data: settlements, isLoading: settlementsLoading } = useUserSettlements();
+  // Fetch ALL purchases and settlements from all users
+  const { purchases, settlements, isLoading: expensesLoading } = useAllExpenses();
   
   // THREE-STEP PIPELINE for Visual Merging (Modified for Expense Log)
   // In the expense log, we want to show BOTH the crossed-out expense AND the settlement row
@@ -41,7 +39,7 @@ export default function ExpenseLogPage() {
   }, [purchases, settlements]);
 
   // Fetch user profiles for all participants referenced in the transactions.
-  const transactionsReady = !purchasesLoading && !settlementsLoading;
+  const transactionsReady = !expensesLoading;
   const { users, isLoading: usersLoading } = useUsers(transactions, transactionsReady);
 
   // STEP 1: Create a "Lookup Set" of all settled expense IDs
@@ -123,7 +121,7 @@ export default function ExpenseLogPage() {
   // Create columns with Firebase users and settlements
   const columns = useMemo(() => createColumns(users, settlements || []), [users, settlements]);
 
-  if (purchasesLoading || settlementsLoading || usersLoading) {
+  if (expensesLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin" />
